@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::Write;
+use reqwest::Client;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -8,9 +8,6 @@ use anyhow::Context;
 use serde::Deserialize;
 use tauri::State;
 use tokio::sync::Mutex as AsyncMutex;
-use tracing::Level;
-use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use evocode_proto::{ProviderRoute, ServerConfig, WireProtocol};
 
 pub struct BridgeState {
@@ -69,6 +66,7 @@ fn default_server_config() -> ServerConfig {
         api_key: String::new(),
         protocol: WireProtocol::Openai,
         providers: Vec::new(),
+        http_client: Client::new(),
     }
 }
 
@@ -128,6 +126,7 @@ impl From<EvocodeConfig> for ServerConfig {
             api_key: config.api_key.unwrap_or_default(),
             protocol: WireProtocol::Openai,
             providers,
+            http_client: Client::new(),
         }
     }
 }
