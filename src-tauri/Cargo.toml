@@ -1,26 +1,28 @@
 [package]
 name = "evocode-tauri"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "evocode_tauri_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "evocode-tauri"
+path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
-tauri-plugin-opener = "2"
+anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-shell = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+evocode-proto = { git = "https://github.com/evolutions-code/evocode", branch = "main" }
+dirs = "6"
+toml = "0.9"
