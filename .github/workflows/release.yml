@@ -31,7 +31,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: '**/node_modules'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -40,8 +39,6 @@ jobs:
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ./src-tauri
 
       - name: Install frontend dependencies
         run: yarn install --frozen-lockfile
