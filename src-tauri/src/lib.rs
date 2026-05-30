@@ -226,6 +226,7 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
         return Err("Bridge is already running".into());
     }
 
+    state.logs.lock().unwrap().clear();
     let config = load_config().map_err(|e| e.to_string())?;
 
     setup_logging(state.logs.clone());
