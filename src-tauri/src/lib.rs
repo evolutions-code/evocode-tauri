@@ -251,7 +251,7 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tauri::command]
 async fn get_app_version() -> Result<String, String> {
-    Ok(tauri::VERSION.to_string())
+    Ok(env!("CARGO_PKG_VERSION").into())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
