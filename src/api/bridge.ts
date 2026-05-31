@@ -24,6 +24,24 @@ export async function writeConfig(content: string): Promise<void> {
   return invoke<void>('write_config', { content })
 }
 
+export async function syncToCodex(
+  providerId: string,
+  model: string,
+  baseUrl: string,
+  apiKey: string,
+  apiKeyHeader: string,
+  wireApi: string,
+): Promise<void> {
+  return invoke<void>('sync_to_codex', {
+    providerId,
+    model,
+    baseUrl,
+    apiKey,
+    apiKeyHeader,
+    wireApi,
+  })
+}
+
 export async function getBridgeLogs(): Promise<string[]> {
   return invoke<string[]>('get_bridge_logs')
 }

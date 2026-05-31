@@ -137,6 +137,16 @@
         </a-button>
       </a-form-item>
 
+      <a-form-item>
+        <a-button
+          block
+          :disabled="!formState.providerId"
+          @click="handleSyncToCodex"
+        >
+          Sync to Codex
+        </a-button>
+      </a-form-item>
+
       <a-alert
         v-if="msg.text"
         :type="msg.type"
@@ -152,7 +162,7 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import { LeftOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { readConfig, writeConfig } from '../api/bridge'
+import { readConfig, writeConfig, syncToCodex } from '../api/bridge'
 
 interface FormState {
   providerId: string
@@ -320,6 +330,38 @@ async function handleSave() {
     setTimeout(() => { msg.text = '' }, 4000)
   } catch (e: any) {
     msg.text = 'Failed to save: ' + e.message
+    msg.type = 'error'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function handleSyncToCodex() {
+  if (!formState.providerId) {
+    msg.text = 'Please select or add a provider first.'
+    msg.type = 'error'
+    return
+  }
+  if (!formState.model || !formState.baseUrl) {
+    msg.text = 'Please fill in Model and Base URL for the provider.'
+    msg.type = 'error'
+    return
+  }
+  saving.value = true
+  try {
+    await syncToCodex(
+      formState.providerId,
+      formState.model,
+      formState.baseUrl,
+      formState.apiKey,
+      formState.apiKeyHeader,
+      formState.wireApi,
+    )
+    msg.text = 'Synced to .codex/config.toml!'
+    msg.type = 'success'
+    setTimeout(() => { msg.text = '' }, 4000)
+  } catch (e: any) {
+    msg.text = 'Failed to sync: ' + (e?.message || String(e))
     msg.type = 'error'
   } finally {
     saving.value = false
