@@ -194,61 +194,6 @@ async fn write_config(content: String) -> Result<(), String> {
     tokio::fs::write(&config_path, content).await.map_err(|e| e.to_string())
 }
 
-fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    use tauri::menu::{MenuBuilder, MenuItemBuilder};
-    use tauri::tray::TrayIconBuilder;
-    use tauri::Manager;
-
-    let app_handle = app.handle().clone();
-
-    let window = app.get_webview_window("main");
-
-    let show_item = MenuItemBuilder::new("Show Window").id("show").build(app)?;
-    let quit_item = MenuItemBuilder::new("Quit").id("quit").build(app)?;
-
-    let menu = MenuBuilder::new(app)
-        .item(&show_item)
-        .separator()
-        .item(&quit_item)
-        .build()?;
-
-    let _tray = TrayIconBuilder::new()
-        .tooltip("evocode")
-        .menu(&menu)
-        .on_menu_event({
-            let h = app_handle.clone();
-            move |_tray, event| {
-                match event.id().as_ref() {
-                    "show" => {
-                        if let Some(w) = h.get_webview_window("main") {
-                            let _ = w.show();
-                            let _ = w.set_focus();
-                        }
-                    }
-                    "quit" => {
-                        h.exit(0);
-                    }
-                    _ => {}
-                }
-            }
-        })
-        .build(app)?;
-
-    if let Some(win) = window {
-        let handle = app_handle.clone();
-        win.on_window_event(move |event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                if let Some(w) = handle.get_webview_window("main") {
-                    let _ = w.hide();
-                }
-            }
-        });
-    }
-
-    Ok(())
-}
-
 #[tauri::command]
 async fn get_app_version() -> Result<String, String> {
     Ok(env!("CARGO_PKG_VERSION").into())
@@ -258,10 +203,6 @@ async fn get_app_version() -> Result<String, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .setup(|app| {
-            setup_tray(app)?;
-            Ok(())
-        })
         .manage(BridgeState::new(17761))
         .invoke_handler(tauri::generate_handler![
             start_bridge,
