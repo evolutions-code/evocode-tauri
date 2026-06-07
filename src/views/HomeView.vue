@@ -11,9 +11,10 @@
           on your machine, beautifully.
         </h1>
         <p class="lead">
-          A unified bridge that exposes Chat Completions, Anthropic Messages and OpenAI Responses
-          from a single local endpoint. Start the bridge below and point your Codex-style client
-          at <code class="mono">http://127.0.0.1:17761</code>.
+          Point Codex at <code class="mono">http://127.0.0.1:17761</code> and let
+          <span class="gradient-text">evocode</span> handle the wire protocol translation.
+          Start the bridge below to expose <code class="mono">/v1/chat/completions</code>,
+          <code class="mono">/v1/messages</code> and <code class="mono">/responses</code> from one local endpoint.
         </p>
 
         <div class="hero-cta">
@@ -29,18 +30,13 @@
 
         <div class="hero-stats">
           <div class="stat">
-            <div class="num">3</div>
-            <div class="lbl">API surfaces</div>
-          </div>
-          <div class="sep" />
-          <div class="stat">
-            <div class="num">1</div>
-            <div class="lbl">local port</div>
-          </div>
-          <div class="sep" />
-          <div class="stat">
             <div class="num mono">17761</div>
             <div class="lbl">default port</div>
+          </div>
+          <div class="sep" />
+          <div class="stat">
+            <div class="num">v<span class="mono">{{ currentVersion || '0.0.0' }}</span></div>
+            <div class="lbl">bridge version</div>
           </div>
         </div>
       </div>
@@ -52,16 +48,16 @@
         <div class="grid-bg" />
         <div class="card-stack">
           <div class="mini-card">
-            <span class="method post">POST</span>
-            <code class="mono">/v1/chat/completions</code>
+            <span class="kv-key">model_provider</span>
+            <code class="mono">"anthropic"</code>
           </div>
           <div class="mini-card">
-            <span class="method post">POST</span>
-            <code class="mono">/v1/messages</code>
+            <span class="kv-key">base_url</span>
+            <code class="mono">http://127.0.0.1:17761</code>
           </div>
           <div class="mini-card">
-            <span class="method post">POST</span>
-            <code class="mono">/responses</code>
+            <span class="kv-key">wire_api</span>
+            <code class="mono">"responses"</code>
           </div>
         </div>
       </div>
@@ -78,27 +74,34 @@
         <div class="stat-head">
           <div class="title">
             <span class="bar" />
-            <span>Bridge Snapshot</span>
+            <span>Codex Connection</span>
           </div>
-          <a-tag v-if="currentVersion" class="ver">v{{ currentVersion }}</a-tag>
+          <a-tag v-if="bridgeStatus === 'running'" class="ver ok">Live</a-tag>
+          <a-tag v-else class="ver off">Idle</a-tag>
         </div>
         <div class="kv">
           <div class="k">Status</div>
           <div class="v" :class="bridgeStatus">
             <span class="dot" /> {{ bridgeStatus }}
           </div>
-          <div class="k">Endpoint</div>
+          <div class="k">Base URL</div>
           <div class="v mono">http://127.0.0.1:17761</div>
+          <div class="k">Catalog</div>
+          <div class="v mono">~/.codex/evocode-model-catalog.json</div>
           <div class="k">Provider</div>
           <div class="v">
             <router-link to="/config" class="link">Manage in Configuration →</router-link>
           </div>
         </div>
+        <a-button
+          class="copy-btn"
+          block
+          @click="copySnippet"
+        >
+          <template #icon><CopyOutlined /></template>
+          {{ copied ? 'Copied!' : 'Copy Codex config.toml snippet' }}
+        </a-button>
       </div>
-    </section>
-
-    <section class="endpoints">
-      <QuickRef />
     </section>
 
     <section ref="logsRef" class="logs">
@@ -110,17 +113,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { SettingOutlined, CodeOutlined } from "@ant-design/icons-vue"
+import { SettingOutlined, CodeOutlined, CopyOutlined } from "@ant-design/icons-vue"
 import { startBridge, stopBridge, getBridgeStatus, readConfig, getAppVersion } from "../api/bridge"
 import BridgeStatus from "../components/BridgeStatus.vue"
 import LogPanel from "../components/LogPanel.vue"
-import QuickRef from "../components/QuickRef.vue"
 
 const router = useRouter()
 const bridgeStatus = ref("stopped")
 const loading = ref(false)
 const currentVersion = ref("")
 const logsRef = ref<HTMLElement | null>(null)
+const copied = ref(false)
 
 async function updateStatus() {
   bridgeStatus.value = await getBridgeStatus()
@@ -145,6 +148,25 @@ async function toggleBridge() {
 
 function goConfig() { router.push("/config") }
 function scrollToLogs() { logsRef.value?.scrollIntoView({ behavior: "smooth", block: "start" }) }
+
+const SNIPPET = `model = "MiniMax-M3"
+model_provider = "anthropic"
+model_context_window = 256000
+model_auto_compact_token_limit = 220000
+model_catalog_json = "~/.codex/evocode-model-catalog.json"
+
+[model_providers.anthropic]
+name = "minimax"
+wire_api = "responses"
+requires_openai_auth = true
+base_url = "http://127.0.0.1:17761"`
+
+function copySnippet() {
+  navigator.clipboard?.writeText(SNIPPET).then(() => {
+    copied.value = true
+    setTimeout(() => (copied.value = false), 1500)
+  }).catch(() => {})
+}
 
 onMounted(async () => {
   await updateStatus()
@@ -181,7 +203,7 @@ onMounted(async () => {
   line-height: 1.15; font-weight: 700; margin: 4px 0 0;
   color: var(--text-1);
 }
-.lead { color: var(--text-3); max-width: 56ch; }
+.lead { color: var(--text-3); max-width: 58ch; }
 .lead code { color: var(--brand-300); background: var(--bg-elev-3); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
 
 .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
@@ -199,6 +221,7 @@ onMounted(async () => {
 .stat .lbl { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .8px; }
 .sep { width: 1px; height: 24px; background: var(--border); }
 
+/* Hero art */
 .hero-art {
   position: relative; min-height: 220px; border-radius: var(--r-lg);
   background: linear-gradient(135deg, rgba(77,125,255,0.12), rgba(139,92,246,0.08));
@@ -222,7 +245,7 @@ onMounted(async () => {
   gap: 10px; padding: 18px 22px;
 }
 .mini-card {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 12px; border-radius: 10px;
   background: var(--bg-glass); border: 1px solid var(--border);
   backdrop-filter: blur(10px);
@@ -230,9 +253,10 @@ onMounted(async () => {
 }
 .mini-card:nth-child(2) { margin-left: 28px; animation-delay: .6s; }
 .mini-card:nth-child(3) { margin-left: 14px; animation-delay: 1.2s; }
-.mini-card .method {
-  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
-  background: rgba(96,165,250,0.18); color: #93c5fd; letter-spacing: .5px;
+.mini-card .kv-key {
+  font-size: 11px; color: var(--text-3);
+  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  text-transform: uppercase; letter-spacing: .8px;
 }
 .mini-card code { color: var(--text-1); font-size: 12.5px; }
 @keyframes float {
@@ -240,23 +264,26 @@ onMounted(async () => {
   50% { transform: translateY(-4px); }
 }
 
+/* Row */
 .row {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 16px;
 }
-.stat-card { padding: 18px 20px; }
-.stat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.stat-card { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.stat-head { display: flex; align-items: center; justify-content: space-between; }
 .stat-head .title { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; color: var(--text-1); }
 .stat-head .bar {
   width: 3px; height: 14px; border-radius: 2px;
   background: linear-gradient(180deg, #22d3ee, #4d7dff);
 }
 .ver { border-radius: 999px; }
+.ver.ok { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.35); color: #34d399; }
+.ver.off { background: var(--bg-elev-3); border-color: var(--border); color: var(--text-3); }
 
 .kv {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 100px 1fr;
   row-gap: 10px;
   column-gap: 12px;
   align-items: center;
@@ -269,6 +296,9 @@ onMounted(async () => {
 .kv .v.stopped .dot { background: var(--text-4); }
 .link { color: var(--brand-300); }
 .link:hover { color: var(--brand-200); }
+
+.copy-btn { margin-top: 4px; background: var(--bg-elev-3); border-color: var(--border); color: var(--text-1); }
+.copy-btn:hover { border-color: var(--border-strong); }
 
 @media (max-width: 880px) {
   .hero { grid-template-columns: 1fr; }
