@@ -484,18 +484,22 @@ function contextLabel(n: number) {
   if (n >= 1_000) return Math.round(n / 1_000) + "K"
   return String(n)
 }
+
 const fillPercent = computed(() => {
   const v = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, limits.contextWindow || CONTEXT_MIN))
   return Math.round(((v - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100)
 })
+
 const compactFillPercent = computed(() => {
   const v = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, limits.compactLimit || CONTEXT_MIN))
   return Math.round(((v - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100)
 })
+
 const compactPercent = computed(() => {
   if (!limits.contextWindow) return 0
   return Math.round((limits.compactLimit / limits.contextWindow) * 100)
 })
+
 function tickLeft(i: number) {
   const p = LIMIT_PRESETS[i]
   const v = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, p.context))
