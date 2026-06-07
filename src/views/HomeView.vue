@@ -7,8 +7,7 @@
           <span>Local multi-protocol bridge</span>
         </div>
         <h1>
-          Run <span class="gradient-text">evocode</span><br />
-          on your machine, beautifully.
+         <span class="gradient-text">evocode</span><br />
         </h1>
         <p class="lead">
           Point Codex at <code class="mono">http://127.0.0.1:17761</code> and let
@@ -16,7 +15,6 @@
           Start the bridge below to expose <code class="mono">/v1/chat/completions</code>,
           <code class="mono">/v1/messages</code> and <code class="mono">/responses</code> from one local endpoint.
         </p>
-
         <div class="hero-cta">
           <a-button type="primary" size="large" class="cta" @click="goConfig">
             <template #icon><SettingOutlined /></template>
