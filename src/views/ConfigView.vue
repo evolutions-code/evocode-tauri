@@ -1,168 +1,232 @@
-<template>
+﻿<template>
   <div class="config-view">
-    <header class="header">
-      <router-link to="/" class="back-link">
-        <LeftOutlined /> Back
-      </router-link>
-      <h2>Configuration</h2>
+    <header class="page-head fade-up">
+      <div>
+        <div class="eyebrow">
+          <span class="dot" />
+          <span>Settings</span>
+        </div>
+        <h1>Configuration</h1>
+        <p class="muted-3">Choose a provider, fill in credentials, and save. The bridge uses this to talk to your upstream API.</p>
+      </div>
+      <div class="head-actions">
+        <a-button @click="$router.push('/')" class="ghost">
+          <template #icon><LeftOutlined /></template>
+          Back to Dashboard
+        </a-button>
+      </div>
     </header>
 
-    <a-form
-      ref="formRef"
-      :model="formState"
-      layout="vertical"
-      class="config-form"
-      @finish="handleSave"
-    >
-      <a-divider orientation="left">General</a-divider>
+    <a-alert
+      v-if="msg.text"
+      :type="msg.type"
+      :message="msg.text"
+      show-icon
+      closable
+      class="fade-up alert"
+      @close="msg.text = ''"
+    />
 
-      <!-- Provider section -->
-      <a-form-item label="Provider" name="providerId">
-        <div class="provider-row">
-          <a-select
-            v-model:value="formState.providerId"
-            placeholder="Choose a provider..."
-            style="flex:1"
-            @change="onProviderChange"
-          >
-            <a-select-option value="">-- Choose --</a-select-option>
-            <a-select-option v-for="id in providerIds" :key="id" :value="id">{{ id }}</a-select-option>
-          </a-select>
-          <a-input
-            v-model:value="newProviderName"
-            placeholder="New name"
-            style="width: 120px"
-          />
-          <a-button type="default" :disabled="!newProviderName" @click="addProvider">+ Add</a-button>
-        </div>
-        <template #extra>
-          <span class="field-hint">Or enter a name above and click Add to create a new provider.</span>
-        </template>
-      </a-form-item>
+    <a-tabs v-model:activeKey="activeKey" class="config-tabs fade-up">
+      <!-- Provider tab -->
+      <a-tab-pane key="provider" tab="Provider">
+        <div class="glass panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Select or create a provider</div>
+              <div class="panel-sub muted-3">Pick an existing provider or add a new one. Quick start templates are available below.</div>
+            </div>
+            <a-tag v-if="formState.providerId" class="active-tag">Active: {{ formState.providerId }}</a-tag>
+          </div>
 
-      <!-- Quick presets -->
-      <div class="presets" v-if="!formState.providerId || newProviderName">
-        <span class="presets-label">Quick start templates:</span>
-        <a-button size="small" @click="applyPreset('openai_chat')">OpenAI Chat (Chat Completions)</a-button>
-        <a-button size="small" @click="applyPreset('anthropic')">Anthropic (Messages API)</a-button>
-      </div>
-
-      <a-row :gutter="12">
-        <a-col :span="12">
-          <a-form-item label="Context Window" name="contextWindow">
-            <a-input-number
-              v-model:value="formState.contextWindow"
-              :min="1"
-              style="width:100%"
-            />
-            <template #extra><span class="field-hint">Max context size for the model.</span></template>
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="Auto Compact Limit" name="compactLimit">
-            <a-input-number
-              v-model:value="formState.compactLimit"
-              :min="1"
-              style="width:100%"
-            />
-            <template #extra><span class="field-hint">Start compacting when tokens exceed this.</span></template>
-          </a-form-item>
-        </a-col>
-      </a-row>
-
-      <!-- Provider config - only shows when provider is selected -->
-      <template v-if="formState.providerId">
-        <a-divider orientation="left">
-          Provider: {{ formState.providerId }}
-          <a-popconfirm title="Remove this provider?" ok-text="Yes" cancel-text="No" @confirm="removeProvider">
-            <DeleteOutlined class="delete-icon" />
-          </a-popconfirm>
-        </a-divider>
-
-        <a-form-item
-          label="Model"
-          name="model"
-          :rules="[{ required: true, message: 'Please enter the model name' }]"
-        >
-          <a-input v-model:value="formState.model" placeholder="e.g. MiniMax-M2.7, gpt-4.1" />
-        </a-form-item>
-
-        <a-form-item
-          label="Base URL"
-          name="baseUrl"
-          :rules="[{ required: true, message: 'Please enter the base URL' }]"
-        >
-          <a-input v-model:value="formState.baseUrl" placeholder="https://api.example.com/v1" />
-        </a-form-item>
-
-        <a-form-item label="API Key" name="apiKey">
-          <a-input-password v-model:value="formState.apiKey" placeholder="Your API key" />
-        </a-form-item>
-
-        <a-row :gutter="12">
-          <a-col :span="12">
-            <a-form-item label="Wire API" name="wireApi">
-              <a-tooltip title="Which API protocol this provider exposes: Anthropic (messages), Chat Completions, or OpenAI (responses)">
-                <a-select v-model:value="formState.wireApi">
-                  <a-select-option value="anthropic">Anthropic (/v1/messages)</a-select-option>
-                  <a-select-option value="chat_completions">Chat Completions (/v1/chat)</a-select-option>
-                  <a-select-option value="openai">OpenAI Responses (/responses)</a-select-option>
+          <a-form layout="vertical" class="form">
+            <a-form-item label="Active Provider">
+              <div class="provider-row">
+                <a-select
+                  v-model:value="formState.providerId"
+                  placeholder="Choose a provider..."
+                  class="provider-select"
+                  @change="onProviderChange"
+                >
+                  <a-select-option value="">-- Choose --</a-select-option>
+                  <a-select-option v-for="id in providerIds" :key="id" :value="id">{{ id }}</a-select-option>
                 </a-select>
-              </a-tooltip>
+                <a-input
+                  v-model:value="newProviderName"
+                  placeholder="New provider name"
+                  class="new-name"
+                  @press-enter="addProvider"
+                />
+                <a-button type="primary" :disabled="!newProviderName" @click="addProvider">
+                  <template #icon><PlusOutlined /></template>
+                  Add
+                </a-button>
+              </div>
             </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="API Key Header" name="apiKeyHeader">
-              <a-tooltip title="The HTTP header name for the API key, e.g. X-Api-Key or Authorization">
-                <a-input v-model:value="formState.apiKeyHeader" placeholder="X-Api-Key" />
-              </a-tooltip>
+
+            <div class="presets">
+              <span class="presets-label">Quick start templates</span>
+              <a-button size="small" class="preset" @click="applyPreset('openai_chat')">
+                <span class="dot blue" /> OpenAI Chat
+              </a-button>
+              <a-button size="small" class="preset" @click="applyPreset('anthropic')">
+                <span class="dot purple" /> Anthropic Messages
+              </a-button>
+            </div>
+          </a-form>
+        </div>
+      </a-tab-pane>
+
+      <!-- Connection tab -->
+      <a-tab-pane key="connection" tab="Connection">
+        <div class="glass panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Connection details</div>
+              <div class="panel-sub muted-3">Tell the bridge how to reach the upstream API.</div>
+            </div>
+            <a-tooltip v-if="formState.providerId" title="Remove this provider">
+              <a-popconfirm title="Remove this provider?" ok-text="Yes" cancel-text="No" @confirm="removeProvider">
+                <a-button danger size="small">
+                  <template #icon><DeleteOutlined /></template>
+                  Remove provider
+                </a-button>
+              </a-popconfirm>
+            </a-tooltip>
+          </div>
+
+          <a-empty
+            v-if="!formState.providerId"
+            description="Select or create a provider first."
+            class="empty-block"
+          />
+
+          <a-form
+            v-else
+            layout="vertical"
+            class="form"
+            :model="formState"
+          >
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item label="Model" required>
+                  <a-input v-model:value="formState.model" placeholder="e.g. MiniMax-M2.7, gpt-4.1" />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="Wire API">
+                  <a-tooltip title="Which API protocol this provider exposes: Anthropic, Chat Completions, or OpenAI Responses">
+                    <a-select v-model:value="formState.wireApi">
+                      <a-select-option value="anthropic">
+                        <span class="opt-row"><span class="dot purple" /> Anthropic (/v1/messages)</span>
+                      </a-select-option>
+                      <a-select-option value="chat_completions">
+                        <span class="opt-row"><span class="dot blue" /> Chat Completions (/v1/chat)</span>
+                      </a-select-option>
+                      <a-select-option value="openai">
+                        <span class="opt-row"><span class="dot cyan" /> OpenAI Responses (/responses)</span>
+                      </a-select-option>
+                    </a-select>
+                  </a-tooltip>
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-form-item label="Base URL" required>
+              <a-input v-model:value="formState.baseUrl" placeholder="https://api.example.com/v1" />
             </a-form-item>
-          </a-col>
-        </a-row>
-      </template>
 
-      <a-form-item v-if="!formState.providerId">
-        <a-alert type="info" message="Select or create a provider above to configure its settings." show-icon />
-      </a-form-item>
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item label="API Key">
+                  <a-input-password v-model:value="formState.apiKey" placeholder="Your API key" />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="API Key Header">
+                  <a-tooltip title="The HTTP header name for the API key, e.g. X-Api-Key or Authorization">
+                    <a-input v-model:value="formState.apiKeyHeader" placeholder="X-Api-Key" />
+                  </a-tooltip>
+                </a-form-item>
+              </a-col>
+            </a-row>
+          </a-form>
+        </div>
+      </a-tab-pane>
 
-      <a-form-item>
-        <a-button
-          type="primary"
-          html-type="submit"
-          block
-          :loading="saving"
-          :disabled="!formState.providerId"
-        >
-          Save Config
-        </a-button>
-      </a-form-item>
+      <!-- Limits tab -->
+      <a-tab-pane key="limits" tab="Limits">
+        <div class="glass panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Model limits</div>
+              <div class="panel-sub muted-3">Control context size and auto-compaction thresholds.</div>
+            </div>
+          </div>
 
-      <a-form-item>
-        <a-button
-          block
-          :disabled="!formState.providerId"
-          @click="handleSyncToCodex"
-        >
-          Sync to Codex
-        </a-button>
-      </a-form-item>
+          <a-form layout="vertical" class="form">
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item label="Context Window">
+                  <a-input-number
+                    v-model:value="formState.contextWindow"
+                    :min="1"
+                    :step="1000"
+                    class="full"
+                  />
+                  <div class="hint muted-3">Max context size for the model.</div>
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="Auto Compact Limit">
+                  <a-input-number
+                    v-model:value="formState.compactLimit"
+                    :min="1"
+                    :step="1000"
+                    class="full"
+                  />
+                  <div class="hint muted-3">Start compacting when tokens exceed this.</div>
+                </a-form-item>
+              </a-col>
+            </a-row>
+          </a-form>
+        </div>
+      </a-tab-pane>
+    </a-tabs>
 
-      <a-alert
-        v-if="msg.text"
-        :type="msg.type"
-        :message="msg.text"
-        show-icon
-        closable
-        @close="msg.text = ''"
-      />
-    </a-form>
+    <footer class="actions fade-up">
+      <a-button
+        type="primary"
+        size="large"
+        :loading="saving"
+        :disabled="!formState.providerId"
+        @click="handleSave"
+      >
+        <template #icon><SaveOutlined /></template>
+        Save Config
+      </a-button>
+      <a-button
+        size="large"
+        :disabled="!formState.providerId"
+        @click="handleSyncToCodex"
+      >
+        <template #icon><SyncOutlined /></template>
+        Sync to Codex
+      </a-button>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
-import { LeftOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { readConfig, writeConfig, syncToCodex } from '../api/bridge'
+import { reactive, ref, onMounted } from "vue"
+import {
+  LeftOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  SaveOutlined,
+  SyncOutlined,
+} from "@ant-design/icons-vue"
+import { readConfig, writeConfig, syncToCodex } from "../api/bridge"
 
 interface FormState {
   providerId: string
@@ -177,46 +241,46 @@ interface FormState {
 
 const PRESETS: Record<string, Partial<FormState>> = {
   openai_chat: {
-    wireApi: 'chat_completions',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4.1',
-    apiKeyHeader: 'Authorization',
+    wireApi: "chat_completions",
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4.1",
+    apiKeyHeader: "Authorization",
   },
   anthropic: {
-    wireApi: 'anthropic',
-    baseUrl: 'https://api.anthropic.com',
-    model: 'claude-3-5-sonnet-latest',
-    apiKeyHeader: 'X-Api-Key',
+    wireApi: "anthropic",
+    baseUrl: "https://api.anthropic.com",
+    model: "claude-3-5-sonnet-latest",
+    apiKeyHeader: "X-Api-Key",
   },
 }
 
 const DEFAULT_CONTEXT_WINDOW = 256000
 const DEFAULT_COMPACT_LIMIT = 220000
 
+const activeKey = ref("provider")
 const providerIds = ref<string[]>([])
-const newProviderName = ref('')
+const newProviderName = ref("")
 const saving = ref(false)
-const msg = reactive({ text: '', type: 'success' as 'success' | 'error' | 'warning' })
+const msg = reactive({ text: "", type: "success" as "success" | "error" | "warning" })
 
 const formState = reactive<FormState>({
-  providerId: '',
+  providerId: "",
   contextWindow: DEFAULT_CONTEXT_WINDOW,
   compactLimit: DEFAULT_COMPACT_LIMIT,
-  wireApi: 'anthropic',
-  baseUrl: '',
-  model: '',
-  apiKey: '',
-  apiKeyHeader: 'X-Api-Key',
+  wireApi: "anthropic",
+  baseUrl: "",
+  model: "",
+  apiKey: "",
+  apiKeyHeader: "X-Api-Key",
 })
 
 function applyPreset(name: string) {
   const preset = PRESETS[name]
   if (!preset) return
-  if (!providerIds.value.includes(name)) {
-    providerIds.value.push(name)
-  }
+  if (!providerIds.value.includes(name)) providerIds.value.push(name)
   formState.providerId = name
   Object.assign(formState, preset)
+  activeKey.value = "connection"
 }
 
 function addProvider() {
@@ -224,65 +288,67 @@ function addProvider() {
   if (name && !providerIds.value.includes(name)) {
     providerIds.value.push(name)
     formState.providerId = name
-    newProviderName.value = ''
+    newProviderName.value = ""
     onProviderChange()
+    activeKey.value = "connection"
   }
 }
 
 function removeProvider() {
   const idx = providerIds.value.indexOf(formState.providerId)
   if (idx > -1) providerIds.value.splice(idx, 1)
-  formState.providerId = ''
+  formState.providerId = ""
   onProviderChange()
+  activeKey.value = "provider"
 }
 
 function onProviderChange() {
-  formState.model = ''
-  formState.baseUrl = ''
-  formState.apiKey = ''
-  formState.wireApi = 'anthropic'
-  formState.apiKeyHeader = 'X-Api-Key'
+  formState.model = ""
+  formState.baseUrl = ""
+  formState.apiKey = ""
+  formState.wireApi = "anthropic"
+  formState.apiKeyHeader = "X-Api-Key"
 }
 
 function parseConfig(text: string) {
   providerIds.value = []
   if (!text) return
 
-  const lines = text.split('\n')
-  let currentProvider = ''
+  const lines = text.split("\n")
+  let currentProvider = ""
   let inProviderSection = false
 
   for (const line of lines) {
     const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
+    if (!trimmed || trimmed.startsWith("#")) continue
 
-    if (trimmed.startsWith('provider = ')) {
-      formState.providerId = trimmed.replace('provider = ', '').replace(/"/g, '')
-    } else if (trimmed.startsWith('model_context_window = ')) {
-      const val = parseInt(trimmed.replace('model_context_window = ', ''))
+    if (trimmed.startsWith("provider = ")) {
+      formState.providerId = trimmed.replace("provider = ", "").replace(/"/g, "")
+    } else if (trimmed.startsWith("model_context_window = ")) {
+      const val = parseInt(trimmed.replace("model_context_window = ", ""))
       if (!isNaN(val)) formState.contextWindow = val
-    } else if (trimmed.startsWith('model_auto_compact_token_limit = ')) {
-      const val = parseInt(trimmed.replace('model_auto_compact_token_limit = ', ''))
+    } else if (trimmed.startsWith("model_auto_compact_token_limit = ")) {
+      const val = parseInt(trimmed.replace("model_auto_compact_token_limit = ", ""))
       if (!isNaN(val)) formState.compactLimit = val
-    } else if (trimmed.startsWith('[providers.')) {
-      currentProvider = trimmed.replace('[providers.', '').replace(']', '')
+    } else if (trimmed.startsWith("[providers.")) {
+      currentProvider = trimmed.replace("[providers.", "").replace("]", "")
       inProviderSection = true
       if (!providerIds.value.includes(currentProvider)) {
         providerIds.value.push(currentProvider)
       }
-    } else if (trimmed.startsWith('[') && trimmed !== '[providers.' + currentProvider + ']') {
+    } else if (trimmed.startsWith("[") && trimmed !== "[providers." + currentProvider + "]") {
       inProviderSection = false
     } else if (inProviderSection && currentProvider === formState.providerId) {
-      if (trimmed.startsWith('wire_api = ')) {
-        formState.wireApi = trimmed.replace('wire_api = ', '').replace(/"/g, '')
-      } else if (trimmed.startsWith('base_url = ')) {
-        formState.baseUrl = trimmed.replace('base_url = ', '').replace(/"/g, '')
-      } else if (trimmed.startsWith('model = ')) {
-        formState.model = trimmed.replace('model = ', '').replace(/"/g, '')
-      } else if (trimmed.startsWith('api_key = ')) {
-        formState.apiKey = trimmed.replace('api_key = ', '').replace(/"/g, '')
-      } else if (trimmed.startsWith('api_key_header = ')) {
-        formState.apiKeyHeader = trimmed.replace('api_key_header = ', '').replace(/"/g, '')
+      if (trimmed.startsWith("wire_api = ")) {
+        formState.wireApi = trimmed.replace("wire_api = ", "").replace(/"/g, "")
+      } else if (trimmed.startsWith("base_url = ")) {
+        formState.baseUrl = trimmed.replace("base_url = ", "").replace(/"/g, "")
+      } else if (trimmed.startsWith("model = ")) {
+        formState.model = trimmed.replace("model = ", "").replace(/"/g, "")
+      } else if (trimmed.startsWith("api_key = ")) {
+        formState.apiKey = trimmed.replace("api_key = ", "").replace(/"/g, "")
+      } else if (trimmed.startsWith("api_key_header = ")) {
+        formState.apiKeyHeader = trimmed.replace("api_key_header = ", "").replace(/"/g, "")
       }
     }
   }
@@ -291,46 +357,44 @@ function parseConfig(text: string) {
 function buildConfig(): string {
   const ctx = formState.contextWindow || DEFAULT_CONTEXT_WINDOW
   const compact = formState.compactLimit || DEFAULT_COMPACT_LIMIT
-  const lines: string[] = [
-    '# evocode bridge config',
-    '# Read by evocode-cli, not by upstream Codex directly.',
-    '',
+  return [
+    "# evocode bridge config",
+    "# Read by evocode-cli, not by upstream Codex directly.",
+    "",
     `provider = "${formState.providerId}"`,
-    '',
+    "",
     `model_context_window = ${ctx}`,
     `model_auto_compact_token_limit = ${compact}`,
-    '',
+    "",
     `[providers.${formState.providerId}]`,
     `wire_api = "${formState.wireApi}"`,
     `base_url = "${formState.baseUrl}"`,
     `model = "${formState.model}"`,
     `api_key = "${formState.apiKey}"`,
     `api_key_header = "${formState.apiKeyHeader}"`,
-  ]
-  return lines.join('\n')
+  ].join("\n")
 }
 
 async function handleSave() {
   if (!formState.providerId) {
-    msg.text = 'Please select or add a provider first.'
-    msg.type = 'error'
+    msg.text = "Please select or add a provider first."
+    msg.type = "error"
     return
   }
   if (!formState.model || !formState.baseUrl) {
-    msg.text = 'Please fill in Model and Base URL for the provider.'
-    msg.type = 'error'
+    msg.text = "Please fill in Model and Base URL for the provider."
+    msg.type = "error"
     return
   }
   saving.value = true
   try {
-    const content = buildConfig()
-    await writeConfig(content)
-    msg.text = 'Config saved! Restart the bridge to apply changes.'
-    msg.type = 'success'
-    setTimeout(() => { msg.text = '' }, 4000)
+    await writeConfig(buildConfig())
+    msg.text = "Config saved! Restart the bridge to apply changes."
+    msg.type = "success"
+    setTimeout(() => { msg.text = "" }, 4000)
   } catch (e: any) {
-    msg.text = 'Failed to save: ' + e.message
-    msg.type = 'error'
+    msg.text = "Failed to save: " + (e?.message || String(e))
+    msg.type = "error"
   } finally {
     saving.value = false
   }
@@ -338,13 +402,8 @@ async function handleSave() {
 
 async function handleSyncToCodex() {
   if (!formState.providerId) {
-    msg.text = 'Please select or add a provider first.'
-    msg.type = 'error'
-    return
-  }
-  if (!formState.model || !formState.baseUrl) {
-    msg.text = 'Please fill in Model and Base URL for the provider.'
-    msg.type = 'error'
+    msg.text = "Please select a provider first."
+    msg.type = "error"
     return
   }
   saving.value = true
@@ -357,12 +416,12 @@ async function handleSyncToCodex() {
       formState.apiKeyHeader,
       formState.wireApi,
     )
-    msg.text = 'Synced to .codex/config.toml!'
-    msg.type = 'success'
-    setTimeout(() => { msg.text = '' }, 4000)
+    msg.text = "Synced to .codex/config.toml!"
+    msg.type = "success"
+    setTimeout(() => { msg.text = "" }, 4000)
   } catch (e: any) {
-    msg.text = 'Failed to sync: ' + (e?.message || String(e))
-    msg.type = 'error'
+    msg.text = "Failed to sync: " + (e?.message || String(e))
+    msg.type = "error"
   } finally {
     saving.value = false
   }
@@ -377,84 +436,82 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.config-view {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 20px;
-}
+.config-view { display: flex; flex-direction: column; gap: 18px; }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
 }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--bg-elev-3); color: var(--text-3); font-size: 12px; width: max-content;
+  border: 1px solid var(--border);
+}
+.eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--info); box-shadow: 0 0 8px var(--info); }
 
-.back-link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #888;
-  text-decoration: none;
-  font-size: 14px;
-  transition: color 0.2s;
-}
+.page-head h1 { font-size: 24px; font-weight: 700; color: var(--text-1); margin: 6px 0 2px; }
+.page-head p { color: var(--text-3); max-width: 60ch; }
+.head-actions { display: flex; gap: 8px; }
+.ghost { background: var(--bg-elev-3); border-color: var(--border); color: var(--text-1); }
+.ghost:hover { border-color: var(--border-strong); }
 
-.back-link:hover {
-  color: #60a5fa;
-}
+.alert { border-radius: var(--r-md); }
 
-.header h2 {
-  font-size: 18px;
-  font-weight: 500;
-  color: #e0e0e0;
-}
+.config-tabs :deep(.ant-tabs-nav) { margin-bottom: 14px; }
+.config-tabs :deep(.ant-tabs-tab) { padding: 8px 4px; color: var(--text-3); }
+.config-tabs :deep(.ant-tabs-tab:hover) { color: var(--text-1); }
+.config-tabs :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) { color: var(--text-1) !important; }
+.config-tabs :deep(.ant-tabs-ink-bar) { background: linear-gradient(90deg, #4d7dff, #8b5cf6); height: 3px; border-radius: 2px; }
 
-.config-form {
-  background: #1a1a1a;
-  border-radius: 10px;
-  padding: 16px;
+.panel { padding: 20px 22px; }
+.panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
 }
+.panel-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.panel-sub { font-size: 12.5px; margin-top: 2px; }
+.active-tag { border-radius: 999px; }
 
-.provider-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
+.form :deep(.ant-form-item-label > label) { color: var(--text-2); font-size: 12.5px; }
 
-.field-hint {
-  font-size: 11px;
-  color: #666;
-}
+.provider-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.provider-select { flex: 1 1 220px; min-width: 200px; }
+.new-name { width: 180px; }
 
 .presets {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 4px; padding: 12px; border-radius: var(--r-md);
+  background: var(--bg-elev-2); border: 1px dashed var(--border-strong);
+}
+.presets-label { font-size: 12px; color: var(--text-3); margin-right: 4px; }
+.preset { background: var(--bg-elev-3); border-color: var(--border); color: var(--text-1); }
+.preset:hover { border-color: var(--border-strong); color: var(--text-1); }
+
+.opt-row { display: inline-flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.blue { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
+.dot.purple { background: #a78bfa; box-shadow: 0 0 8px #a78bfa; }
+.dot.cyan { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
+.dot.green { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+.empty-block { padding: 24px 0; }
+
+.full { width: 100%; }
+.hint { font-size: 11.5px; margin-top: 4px; }
+
+.actions {
+  position: sticky; bottom: 16px; z-index: 5;
+  display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+  padding: 12px 16px; border-radius: var(--r-lg);
+  background: var(--bg-glass); border: 1px solid var(--border);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: var(--shadow-md);
 }
 
-.presets-label {
-  font-size: 12px;
-  color: #666;
-}
-
-.delete-icon {
-  margin-left: 8px;
-  color: #ef4444;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-:deep(.ant-divider) {
-  color: #666;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-:deep(.ant-form-item-label > label) {
-  color: #888;
-  font-size: 12px;
+@media (max-width: 720px) {
+  .actions { justify-content: stretch; }
+  .actions .ant-btn { flex: 1; }
 }
 </style>

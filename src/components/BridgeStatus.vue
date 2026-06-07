@@ -1,23 +1,43 @@
-<template>
-  <div class="bridge-status">
-    <div class="status-info">
-      <div class="status-row">
-        <span class="dot" :class="status" />
-        <span class="label">{{ status }}</span>
-      </div>
-      <div class="url-row">
-        <span class="url-label">URL:</span>
-        <code>http://127.0.0.1:17761</code>
-      </div>
+﻿<template>
+  <div class="bridge-card glass fade-up">
+    <div class="ring" :class="status">
+      <span class="core" />
+      <span class="pulse" />
     </div>
-    <button class="toggle-btn" :class="status" :disabled="loading" @click="$emit('toggle')">
-      {{ loading ? '...' : status === 'running' ? 'Stop' : 'Serve' }}
-    </button>
+    <div class="meta">
+      <div class="label">{{ statusLabel }}</div>
+      <div class="sub">{{ status === 'running' ? 'Serving requests' : status === 'starting' ? 'Booting up...' : 'Idle' }}</div>
+    </div>
+    <div class="url mono">
+      <span class="url-label">URL</span>
+      <code>http://127.0.0.1:17761</code>
+      <a-tooltip title="Copy">
+        <CopyOutlined class="copy" @click="copyUrl" />
+      </a-tooltip>
+    </div>
+    <a-button
+      class="toggle"
+      :type="status === 'running' ? 'default' : 'primary'"
+      :danger="status === 'running'"
+      :loading="loading"
+      size="large"
+      block
+      @click="$emit('toggle')"
+    >
+      <template #icon>
+        <PoweroffOutlined v-if="status !== 'running'" />
+        <PauseOutlined v-else />
+      </template>
+      {{ status === 'running' ? 'Stop Bridge' : 'Start Bridge' }}
+    </a-button>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+import { PoweroffOutlined, PauseOutlined, CopyOutlined } from '@ant-design/icons-vue'
+
+const props = defineProps<{
   status: string
   loading: boolean
 }>()
@@ -25,80 +45,109 @@ defineProps<{
 defineEmits<{
   toggle: []
 }>()
+
+const statusLabel = computed(() => {
+  switch (props.status) {
+    case 'running': return 'Bridge Online'
+    case 'starting': return 'Starting'
+    case 'error': return 'Error'
+    default: return 'Bridge Offline'
+  }
+})
+
+function copyUrl() {
+  navigator.clipboard?.writeText('http://127.0.0.1:17761').catch(() => {})
+}
 </script>
 
 <style scoped>
-.bridge-status {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.status-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.status-row {
-  display: flex;
+.bridge-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "ring meta url"
+    "toggle toggle toggle";
   align-items: center;
-  gap: 10px;
+  gap: 16px 20px;
+  padding: 20px 22px;
+  border-radius: var(--r-lg);
 }
 
-.dot {
-  width: 10px;
-  height: 10px;
+.ring {
+  grid-area: ring;
+  position: relative;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: #ef4444;
+  display: grid;
+  place-items: center;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+.ring .core {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--err); box-shadow: 0 0 12px var(--err);
+}
+.ring .pulse {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid var(--err);
+  opacity: .5;
+  animation: pulse 2s ease-out infinite;
 }
 
-.dot.running {
-  background: #22c55e;
+.ring.running {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.ring.running .core { background: var(--ok); box-shadow: 0 0 14px var(--ok); }
+.ring.running .pulse { border-color: var(--ok); }
+
+.ring.starting {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.ring.starting .core { background: var(--warn); box-shadow: 0 0 12px var(--warn); }
+.ring.starting .pulse { border-color: var(--warn); }
+
+@keyframes pulse {
+  0% { transform: scale(0.85); opacity: .7; }
+  100% { transform: scale(1.6); opacity: 0; }
 }
 
-.label {
-  font-size: 15px;
-  text-transform: capitalize;
-  color: #e0e0e0;
-}
+.meta { grid-area: meta; min-width: 0; }
+.meta .label { font-size: 16px; font-weight: 600; color: var(--text-1); }
+.meta .sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
-.url-row {
-  display: flex;
+.url {
+  grid-area: url;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--bg-elev-3);
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
 }
+.url .url-label { color: var(--text-3); font-size: 10px; text-transform: uppercase; letter-spacing: .8px; }
+.url code { color: var(--brand-300); }
+.url .copy { color: var(--text-3); cursor: pointer; padding: 2px; }
+.url .copy:hover { color: var(--brand-300); }
 
-.url-label {
-  color: #888;
-}
+.toggle { grid-area: toggle; }
 
-.url-row code {
-  color: #60a5fa;
-  font-family: monospace;
-}
-
-.toggle-btn {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  background: #22c55e;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.toggle-btn.running {
-  background: #ef4444;
-}
-
-.toggle-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+@media (max-width: 640px) {
+  .bridge-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "ring"
+      "meta"
+      "url"
+      "toggle";
+    text-align: center;
+    justify-items: center;
+  }
+  .url { font-size: 11px; }
 }
 </style>

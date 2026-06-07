@@ -1,69 +1,113 @@
-<template>
-  <a-card class="log-panel" :bordered="false">
-    <template #title>
-      <div class="log-header">
-        <span class="log-title">Bridge Logs</span>
-        <div class="health-badge" :class="status">
-          <LoadingOutlined v-if="status === 'starting'" />
-          <CheckCircleOutlined v-else-if="status === 'running'" />
-          <CloseCircleOutlined v-else />
-          <span>{{ statusLabel }}</span>
-        </div>
+﻿<template>
+  <div class="log-card glass fade-up">
+    <div class="log-head">
+      <div class="title">
+        <span class="bar" />
+        <span>Bridge Logs</span>
+        <a-tag :color="statusColor" class="status-tag">{{ statusLabel }}</a-tag>
       </div>
-    </template>
-
-    <div class="log-output">
-      <div v-for="(line, i) in logLines" :key="i" class="log-line">{{ line }}</div>
-      <div v-if="logLines.length === 0" class="log-empty">
-        Bridge is {{ bridgeRunning ? 'running' : 'stopped' }}
+      <div class="actions">
+        <a-tooltip title="Refresh">
+          <a-button type="text" size="small" class="icon-btn" @click="pollStatus">
+            <ReloadOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-tooltip title="Clear view">
+          <a-button type="text" size="small" class="icon-btn" @click="logLines = []">
+            <ClearOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-tooltip title="Auto-scroll">
+          <a-switch v-model:checked="autoScroll" size="small" />
+        </a-tooltip>
       </div>
     </div>
-  </a-card>
+
+    <div class="log-body" ref="bodyRef">
+      <div v-if="logLines.length === 0" class="empty">
+        <DatabaseOutlined class="empty-icon" />
+        <div class="empty-title">No logs yet</div>
+        <div class="empty-sub">Bridge is {{ bridgeRunning ? "running" : "stopped" }}.</div>
+      </div>
+      <div
+        v-for="(line, i) in logLines"
+        :key="i"
+        class="log-line"
+        :class="lineClass(line)"
+      >
+        <span class="line-no">{{ String(i + 1).padStart(3, "0") }}</span>
+        <span class="line-content">{{ line }}</span>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue"
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  LoadingOutlined,
-} from '@ant-design/icons-vue'
-import { getBridgeStatus, getBridgeLogs } from '../api/bridge'
+  ReloadOutlined,
+  ClearOutlined,
+  DatabaseOutlined,
+} from "@ant-design/icons-vue"
+import { getBridgeStatus, getBridgeLogs } from "../api/bridge"
 
 const props = defineProps<{
   bridgeRunning: boolean
 }>()
 
-type Status = 'starting' | 'running' | 'stopped' | 'error'
-const status = ref<Status>(props.bridgeRunning ? 'starting' : 'stopped')
+type Status = "starting" | "running" | "stopped" | "error"
+const status = ref<Status>(props.bridgeRunning ? "starting" : "stopped")
 const logLines = ref<string[]>([])
+const autoScroll = ref(true)
+const bodyRef = ref<HTMLElement | null>(null)
 
 const statusLabel = computed(() => {
   switch (status.value) {
-    case 'starting': return 'Starting...'
-    case 'running': return 'Running'
-    case 'error': return 'Error'
-    default: return 'Stopped'
+    case "starting": return "Starting"
+    case "running": return "Running"
+    case "error": return "Error"
+    default: return "Stopped"
   }
 })
+
+const statusColor = computed(() => {
+  switch (status.value) {
+    case "running": return "success"
+    case "starting": return "processing"
+    case "error": return "error"
+    default: return "default"
+  }
+})
+
+function lineClass(line: string) {
+  const l = line.toLowerCase()
+  if (l.includes("error") || l.includes("fail")) return "err"
+  if (l.includes("warn")) return "warn"
+  if (l.includes("request") || l.includes("POST") || l.includes("GET")) return "info"
+  return ""
+}
 
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
 async function pollStatus() {
   try {
     const s = await getBridgeStatus()
-    status.value = s === 'running' ? 'running' : 'stopped'
-    if (s === 'running') {
-      const lines = await getBridgeLogs()
-      logLines.value = lines
+    status.value = s === "running" ? "running" : "stopped"
+    if (s === "running") {
+      logLines.value = await getBridgeLogs()
+      if (autoScroll.value) {
+        await nextTick()
+        const el = bodyRef.value
+        if (el) el.scrollTop = el.scrollHeight
+      }
     }
   } catch {
-    status.value = 'error'
+    status.value = "error"
   }
 }
 
 function startPolling() {
-  status.value = 'starting'
+  status.value = "starting"
   logLines.value = []
   pollStatus()
   statusInterval = setInterval(pollStatus, 1000)
@@ -71,7 +115,7 @@ function startPolling() {
 
 function stopPolling() {
   if (statusInterval) { clearInterval(statusInterval); statusInterval = null }
-  status.value = 'stopped'
+  status.value = "stopped"
   logLines.value = []
 }
 
@@ -83,74 +127,57 @@ watch(() => props.bridgeRunning, (running) => {
 onMounted(() => {
   if (props.bridgeRunning) startPolling()
 })
-
 onUnmounted(stopPolling)
 </script>
 
 <style scoped>
-.log-panel {
-  margin-top: 12px;
-  background: #1a1a1a;
-}
+.log-card { padding: 0; overflow: hidden; }
 
-.log-panel :deep(.ant-card-head) {
-  background: #141414;
-  border-bottom: 1px solid #333;
-  min-height: 40px;
-}
-
-.log-panel :deep(.ant-card-head-title) {
-  padding: 8px 0;
-  font-size: 13px;
-}
-
-.log-panel :deep(.ant-card-body) {
-  padding: 0;
-}
-
-.log-header {
+.log-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
 }
-
-.health-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #888;
+.title { display: inline-flex; align-items: center; gap: 10px; color: var(--text-1); font-weight: 600; }
+.title .bar {
+  width: 3px; height: 14px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--brand-400), var(--brand-700));
 }
+.status-tag { margin-left: 4px; }
 
-.health-badge.running { color: #52c41a; }
-.health-badge.error { color: #ff4d4f; }
-.health-badge.starting { color: #faad14; }
-.health-badge.stopped { color: #888; }
+.actions { display: inline-flex; align-items: center; gap: 8px; }
+.icon-btn { color: var(--text-3); width: 30px; height: 30px; border-radius: 8px; }
+.icon-btn:hover { color: var(--text-1); background: var(--bg-elev-3); }
 
-.log-output {
-  height: 320px;
+.log-body {
+  height: 360px;
   overflow-y: auto;
-  font-family: monospace;
-  font-size: 12px;
-  line-height: 1.6;
-  background: #0d0d0d;
+  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  background: linear-gradient(180deg, var(--bg-elev-1), var(--bg-elev-2));
+  padding: 6px 0;
 }
 
-.log-empty {
-  padding: 24px;
-  text-align: center;
-  color: #555;
+.empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-3); gap: 6px;
 }
+.empty-icon { font-size: 28px; color: var(--text-4); }
+.empty-title { font-size: 14px; color: var(--text-2); }
+.empty-sub { font-size: 12px; color: var(--text-4); }
 
 .log-line {
-  padding: 2px 12px;
-  color: #b0b0b0;
-  white-space: pre-wrap;
-  word-break: break-all;
+  display: flex; gap: 12px; padding: 1px 14px;
+  color: var(--text-2); white-space: pre-wrap; word-break: break-all;
+  transition: background .12s ease;
 }
-
-.log-line:hover {
-  background: #1a1a1a;
-}
+.log-line:hover { background: rgba(255,255,255,0.03); }
+.line-no { color: var(--text-4); user-select: none; min-width: 36px; }
+.log-line.info { color: #cfe1ff; }
+.log-line.warn { color: #fde68a; background: rgba(251,191,36,0.04); }
+.log-line.err  { color: #fecaca; background: rgba(248,113,113,0.06); }
 </style>

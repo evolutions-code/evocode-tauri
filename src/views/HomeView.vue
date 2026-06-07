@@ -1,76 +1,150 @@
-<template>
+﻿<template>
   <div class="home">
-    <a-card class="intro-card" :bordered="false">
-      <div class="intro">
-        <div class="intro-text">
-          <h1>evocode</h1>
-          <p>Local multi-protocol bridge for Codex-style coding workflows.</p>
-          <div class="endpoints">
-            <span class="method">POST</span><code>/v1/chat/completions</code>
-            <span class="method">POST</span><code>/v1/messages</code>
-            <span class="method">POST</span><code>/responses</code>
+    <section class="hero glass fade-up">
+      <div class="hero-content">
+        <div class="eyebrow">
+          <span class="dot" />
+          <span>Local multi-protocol bridge</span>
+        </div>
+        <h1>
+          Run <span class="gradient-text">evocode</span><br />
+          on your machine, beautifully.
+        </h1>
+        <p class="lead">
+          A unified bridge that exposes Chat Completions, Anthropic Messages and OpenAI Responses
+          from a single local endpoint. Start the bridge below and point your Codex-style client
+          at <code class="mono">http://127.0.0.1:17761</code>.
+        </p>
+
+        <div class="hero-cta">
+          <a-button type="primary" size="large" class="cta" @click="goConfig">
+            <template #icon><SettingOutlined /></template>
+            Configure Provider
+          </a-button>
+          <a-button size="large" class="cta-secondary" @click="scrollToLogs">
+            <template #icon><CodeOutlined /></template>
+            View Live Logs
+          </a-button>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="num">3</div>
+            <div class="lbl">API surfaces</div>
+          </div>
+          <div class="sep" />
+          <div class="stat">
+            <div class="num">1</div>
+            <div class="lbl">local port</div>
+          </div>
+          <div class="sep" />
+          <div class="stat">
+            <div class="num mono">17761</div>
+            <div class="lbl">default port</div>
           </div>
         </div>
-        <div v-if="currentVersion" class="version-badge">v{{ currentVersion }}</div>
       </div>
-    </a-card>
 
-    <BridgeStatus :status="bridgeStatus" :loading="loading" @toggle="toggleBridge" />
+      <div class="hero-art" aria-hidden="true">
+        <div class="orb orb-a" />
+        <div class="orb orb-b" />
+        <div class="orb orb-c" />
+        <div class="grid-bg" />
+        <div class="card-stack">
+          <div class="mini-card">
+            <span class="method post">POST</span>
+            <code class="mono">/v1/chat/completions</code>
+          </div>
+          <div class="mini-card">
+            <span class="method post">POST</span>
+            <code class="mono">/v1/messages</code>
+          </div>
+          <div class="mini-card">
+            <span class="method post">POST</span>
+            <code class="mono">/responses</code>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <LogPanel :bridge-running="bridgeStatus === 'running'" />
+    <section class="row">
+      <BridgeStatus
+        class="status-card"
+        :status="bridgeStatus"
+        :loading="loading"
+        @toggle="toggleBridge"
+      />
+      <div class="stat-card glass fade-up">
+        <div class="stat-head">
+          <div class="title">
+            <span class="bar" />
+            <span>Bridge Snapshot</span>
+          </div>
+          <a-tag v-if="currentVersion" class="ver">v{{ currentVersion }}</a-tag>
+        </div>
+        <div class="kv">
+          <div class="k">Status</div>
+          <div class="v" :class="bridgeStatus">
+            <span class="dot" /> {{ bridgeStatus }}
+          </div>
+          <div class="k">Endpoint</div>
+          <div class="v mono">http://127.0.0.1:17761</div>
+          <div class="k">Provider</div>
+          <div class="v">
+            <router-link to="/config" class="link">Manage in Configuration →</router-link>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <div class="footer-hint">
-      Configure via the <router-link to="/config">settings</router-link> icon above.
-    </div>
+    <section class="endpoints">
+      <QuickRef />
+    </section>
+
+    <section ref="logsRef" class="logs">
+      <LogPanel :bridge-running="bridgeStatus === 'running'" />
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { startBridge, stopBridge, getBridgeStatus, readConfig, getAppVersion } from '../api/bridge'
-import BridgeStatus from '../components/BridgeStatus.vue'
-import LogPanel from '../components/LogPanel.vue'
+import { ref, onMounted } from "vue"
+import { useRouter } from "vue-router"
+import { SettingOutlined, CodeOutlined } from "@ant-design/icons-vue"
+import { startBridge, stopBridge, getBridgeStatus, readConfig, getAppVersion } from "../api/bridge"
+import BridgeStatus from "../components/BridgeStatus.vue"
+import LogPanel from "../components/LogPanel.vue"
+import QuickRef from "../components/QuickRef.vue"
 
 const router = useRouter()
-const bridgeStatus = ref('stopped')
+const bridgeStatus = ref("stopped")
 const loading = ref(false)
-const currentVersion = ref('')
+const currentVersion = ref("")
+const logsRef = ref<HTMLElement | null>(null)
 
 async function updateStatus() {
   bridgeStatus.value = await getBridgeStatus()
 }
 
 async function toggleBridge() {
-  if (bridgeStatus.value === 'running') {
+  if (bridgeStatus.value === "running") {
     loading.value = true
-    try {
-      await stopBridge()
-      await updateStatus()
-    } finally {
-      loading.value = false
-    }
+    try { await stopBridge(); await updateStatus() }
+    finally { loading.value = false }
     return
   }
-
-  // check provider config before starting
   try {
     const text = await readConfig()
-    const hasProvider = text.includes('provider = "') && text.includes('[providers.')
-    if (!hasProvider) {
-      router.push('/config')
-      return
-    }
+    const hasProvider = text.includes('provider = "') && text.includes("[providers.")
+    if (!hasProvider) { router.push("/config"); return }
   } catch {}
-
   loading.value = true
-  try {
-    await startBridge()
-    await updateStatus()
-  } finally {
-    loading.value = false
-  }
+  try { await startBridge(); await updateStatus() }
+  finally { loading.value = false }
 }
+
+function goConfig() { router.push("/config") }
+function scrollToLogs() { logsRef.value?.scrollIntoView({ behavior: "smooth", block: "start" }) }
 
 onMounted(async () => {
   await updateStatus()
@@ -79,76 +153,126 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.home {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 20px;
+.home { display: flex; flex-direction: column; gap: 18px; }
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  padding: 28px 28px;
+  border-radius: var(--r-xl);
+  position: relative;
+  overflow: hidden;
+}
+.hero-content { display: flex; flex-direction: column; gap: 14px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--bg-elev-3);
+  color: var(--text-3); font-size: 12px; width: max-content;
+  border: 1px solid var(--border);
+}
+.eyebrow .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ok); box-shadow: 0 0 8px var(--ok);
+}
+.hero h1 {
+  font-size: clamp(26px, 3.6vw, 36px);
+  line-height: 1.15; font-weight: 700; margin: 4px 0 0;
+  color: var(--text-1);
+}
+.lead { color: var(--text-3); max-width: 56ch; }
+.lead code { color: var(--brand-300); background: var(--bg-elev-3); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
+
+.hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.cta { box-shadow: var(--shadow-glow); }
+.cta-secondary { background: var(--bg-elev-3); border-color: var(--border); color: var(--text-1); }
+.cta-secondary:hover { border-color: var(--border-strong); }
+
+.hero-stats {
+  display: inline-flex; align-items: center; gap: 18px;
+  margin-top: 6px; padding: 10px 14px; border-radius: var(--r-md);
+  background: var(--bg-elev-2); border: 1px solid var(--border); width: max-content;
+}
+.stat { display: flex; flex-direction: column; align-items: flex-start; }
+.stat .num { font-size: 18px; font-weight: 700; color: var(--text-1); }
+.stat .lbl { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .8px; }
+.sep { width: 1px; height: 24px; background: var(--border); }
+
+.hero-art {
+  position: relative; min-height: 220px; border-radius: var(--r-lg);
+  background: linear-gradient(135deg, rgba(77,125,255,0.12), rgba(139,92,246,0.08));
+  border: 1px solid var(--border); overflow: hidden;
+}
+.grid-bg {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(circle at 60% 50%, black 0%, transparent 70%);
+}
+.orb { position: absolute; border-radius: 50%; filter: blur(40px); opacity: .6; }
+.orb-a { width: 180px; height: 180px; background: #4d7dff; top: -40px; right: -20px; }
+.orb-b { width: 140px; height: 140px; background: #8b5cf6; bottom: -30px; left: 10px; }
+.orb-c { width: 100px; height: 100px; background: #22d3ee; top: 30%; left: 40%; opacity: .35; }
+
+.card-stack {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+  gap: 10px; padding: 18px 22px;
+}
+.mini-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--bg-glass); border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  animation: float 6s ease-in-out infinite;
+}
+.mini-card:nth-child(2) { margin-left: 28px; animation-delay: .6s; }
+.mini-card:nth-child(3) { margin-left: 14px; animation-delay: 1.2s; }
+.mini-card .method {
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  background: rgba(96,165,250,0.18); color: #93c5fd; letter-spacing: .5px;
+}
+.mini-card code { color: var(--text-1); font-size: 12.5px; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
-.intro-card {
-  margin-bottom: 16px;
-}
-
-.intro-card :deep(.ant-card-body) {
-  padding: 20px;
-}
-
-.intro {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
   gap: 16px;
 }
-
-.intro-text h1 {
-  font-size: 22px;
-  font-weight: 600;
-  color: #fff;
-  margin: 0 0 4px;
+.stat-card { padding: 18px 20px; }
+.stat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.stat-head .title { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; color: var(--text-1); }
+.stat-head .bar {
+  width: 3px; height: 14px; border-radius: 2px;
+  background: linear-gradient(180deg, #22d3ee, #4d7dff);
 }
+.ver { border-radius: 999px; }
 
-.intro-text p {
-  font-size: 13px;
-  color: #888;
-  margin: 0 0 12px;
+.kv {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  row-gap: 10px;
+  column-gap: 12px;
+  align-items: center;
 }
+.kv .k { color: var(--text-3); font-size: 12px; }
+.kv .v { color: var(--text-1); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.kv .v .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-4); }
+.kv .v.running { color: var(--ok); }
+.kv .v.running .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.kv .v.stopped .dot { background: var(--text-4); }
+.link { color: var(--brand-300); }
+.link:hover { color: var(--brand-200); }
 
-.endpoints {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.method {
-  color: #60a5fa;
-  font-family: monospace;
-  font-size: 11px;
-}
-
-code {
-  color: #b0b0b0;
-  font-family: monospace;
-}
-
-.version-badge {
-  font-size: 12px;
-  color: #60a5fa;
-  background: rgba(96, 165, 250, 0.1);
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(96, 165, 250, 0.2);
-  white-space: nowrap;
-}
-
-.footer-hint {
-  margin-top: 16px;
-  text-align: center;
-  font-size: 12px;
-  color: #555;
-}
-
-.footer-hint a {
-  color: #60a5fa;
-  text-decoration: none;
+@media (max-width: 880px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-art { min-height: 180px; }
+  .row { grid-template-columns: 1fr; }
 }
 </style>
