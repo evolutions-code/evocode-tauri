@@ -38,25 +38,20 @@
   "bridge.port": "端口",
   "bridge.pid": "进程 ID",
   "bridge.uptime": "运行时长",
-
-    // BridgeStatus (additional)
   "bridge.online": "桥接在线",
   "bridge.offline": "桥接离线",
   "bridge.starting": "启动中",
   "bridge.serving": "正在处理请求",
   "bridge.booting": "正在启动...",
-  "bridge.idle": "空闲",
   "bridge.copy": "复制",
   "bridge.url": "URL",
+  "bridge.idle": "空闲",
 
-
-  // Config - General
+  // Config
   "config.settings": "设置",
   "config.title": "配置",
   "config.desc": "选择预设 Provider，填入凭证，保存即可。可存储多个 Provider，随时切换。",
   "config.back": "返回仪表盘",
-
-  // Config - Providers
   "config.providers": "Providers",
   "config.providers.desc": "可添加任意数量的 Provider，激活的 Provider 供桥接服务使用。",
   "config.providers.remove_title": "移除此 Provider？",
@@ -65,13 +60,9 @@
   "config.providers.placeholder": "新 provider id",
   "config.providers.add": "添加",
   "config.providers.active": "当前激活：",
-
-  // Config - Wire API
   "config.wire_api": "Wire API",
   "config.wire_api.desc": "选择协议。Model 和 Base URL 在下方分别填写。",
   "config.wire_api.tooltip": "上游 Provider 使用哪种 API 协议",
-
-  // Config - Settings form
   "config.form.title": "Provider 设置",
   "config.form.desc": "这些值保存在",
   "config.form.reset": "重置",
@@ -86,17 +77,11 @@
   "config.form.api_key_header": "API 密钥 Header",
   "config.form.api_key_header_tooltip": "API 密钥的 HTTP 头部名称，例如 X-Api-Key 或 Authorization",
   "config.form.api_key_header_placeholder": "X-Api-Key",
-
-  // Config - Wire options
   "config.wire.anthropic": "Anthropic（/v1/messages）",
   "config.wire.chat": "Chat Completions（/v1/chat）",
   "config.wire.openai": "OpenAI Responses（/responses）",
-
-  // Config - Tabs
   "config.tab.connection": "连接",
   "config.tab.limits": "模型限制",
-
-  // Config - Limits
   "config.limits.title": "上下文与自动压缩",
   "config.limits.desc": "拖动滑块或点击预设值。",
   "config.limits.context": "上下文窗口",
@@ -111,8 +96,6 @@
   "config.limits.preset_256k": "标准",
   "config.limits.preset_512k": "大",
   "config.limits.preset_1m": "巨大",
-
-  // Config - Buttons
   "config.save": "保存配置",
   "config.sync": "同步到 Codex",
 
@@ -130,4 +113,14 @@
   "logs.label_error": "错误",
   "logs.label_stopped": "已停止",
 
+  // Update
+  "update.check": "检查更新",
+  "update.up_to_date": "已是最新版本！",
+  "update.found": "发现新版本",
+  "update.error": "检查更新失败",
+  "update.modal_version": "新版本",
+  "update.modal_current": "当前版本：",
+  "update.download": "前往下载",
+  "update.modal_skip": "稍后再说",
 }
+

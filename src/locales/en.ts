@@ -38,25 +38,20 @@
   "bridge.port": "Port",
   "bridge.pid": "PID",
   "bridge.uptime": "Uptime",
-
-    // BridgeStatus (additional)
   "bridge.online": "Bridge Online",
   "bridge.offline": "Bridge Offline",
   "bridge.starting": "Starting",
   "bridge.serving": "Serving requests",
   "bridge.booting": "Booting up...",
-  "bridge.idle": "Idle",
   "bridge.copy": "Copy",
   "bridge.url": "URL",
+  "bridge.idle": "Idle",
 
-
-  // Config - General
+  // Config
   "config.settings": "Settings",
   "config.title": "Configuration",
   "config.desc": "Pick a provider preset, fill in credentials, save. You can store many providers and switch the active one anytime.",
   "config.back": "Back to Dashboard",
-
-  // Config - Providers
   "config.providers": "Providers",
   "config.providers.desc": "Add as many as you like. The active one is what the bridge uses.",
   "config.providers.remove_title": "Remove this provider?",
@@ -65,13 +60,9 @@
   "config.providers.placeholder": "new provider id",
   "config.providers.add": "Add",
   "config.providers.active": "Active:",
-
-  // Config - Wire API
   "config.wire_api": "Wire API",
   "config.wire_api.desc": "Choose the protocol. Model and Base URL are filled separately below.",
   "config.wire_api.tooltip": "Which API protocol this upstream provider speaks",
-
-  // Config - Settings form
   "config.form.title": "Settings for Provider",
   "config.form.desc": "These values are saved under",
   "config.form.reset": "Reset",
@@ -86,17 +77,11 @@
   "config.form.api_key_header": "API Key Header",
   "config.form.api_key_header_tooltip": "The HTTP header name for the API key, e.g. X-Api-Key or Authorization",
   "config.form.api_key_header_placeholder": "X-Api-Key",
-
-  // Config - Wire options
   "config.wire.anthropic": "Anthropic (/v1/messages)",
   "config.wire.chat": "Chat Completions (/v1/chat)",
   "config.wire.openai": "OpenAI Responses (/responses)",
-
-  // Config - Tabs
   "config.tab.connection": "Connection",
   "config.tab.limits": "Model limits",
-
-  // Config - Limits
   "config.limits.title": "Context & auto-compact",
   "config.limits.desc": "Drag the sliders or click the preset values.",
   "config.limits.context": "Context window",
@@ -111,8 +96,6 @@
   "config.limits.preset_256k": "Standard",
   "config.limits.preset_512k": "Large",
   "config.limits.preset_1m": "Huge",
-
-  // Config - Buttons
   "config.save": "Save Config",
   "config.sync": "Sync to Codex",
 
@@ -130,4 +113,14 @@
   "logs.label_error": "Error",
   "logs.label_stopped": "Stopped",
 
+  // Update
+  "update.check": "Check Update",
+  "update.up_to_date": "Already up to date!",
+  "update.found": "Update Available",
+  "update.error": "Update check failed",
+  "update.modal_version": "New version",
+  "update.modal_current": "Current version:",
+  "update.download": "Download",
+  "update.modal_skip": "Maybe later",
 }
+

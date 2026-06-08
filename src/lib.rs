@@ -208,54 +208,38 @@ async fn check_update() -> Result<String, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let html = client
-        .get("https://github.com/evolutions-code/evocode-tauri/releases")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+    let url = "https://api.github.com/repos/evolutions-code/evocode-tauri/releases/latest";
+    let resp = client
+        .get(url)
+        .header("User-Agent", "evocode-tauri")
+        .header("Accept", "application/json")
         .send()
         .await
-        .map_err(|_| "Network error: cannot reach GitHub".to_string())?
-        .text()
+        .map_err(|_| format!("{}__{}", "network_error", current))?;
+
+    if !resp.status().is_success() {
+        return Ok(format!("{}__{}", "no_update", current));
+    }
+
+    #[derive(serde::Deserialize)]
+    struct Release {
+        tag_name: String,
+        html_url: String,
+        #[allow(dead_code)]
+        body: Option<String>,
+    }
+
+    let release: Release = resp
+        .json()
         .await
-        .map_err(|_| "Failed to read response".to_string())?;
+        .map_err(|_| format!("{}__{}", "parse_error", current))?;
 
-    // Find all "evocode-vX.Y.Z" patterns in the HTML
-    let mut latest = String::new();
-    let mut pos = 0;
-    let bytes = html.as_bytes();
-    let prefix = b"evocode-v";
-
-    while pos + prefix.len() < bytes.len() {
-        if bytes[pos..].starts_with(prefix) {
-            let start = pos + prefix.len();
-            let mut end = start;
-            while end < bytes.len() && bytes[end] != b'<' && bytes[end] != b'"' && bytes[end] != b' ' && bytes[end] != b'>' {
-                end += 1;
-            }
-            let ver_str = std::str::from_utf8(&bytes[start..end]).unwrap_or("");
-            let parts: Vec<u64> = ver_str.split('.').filter_map(|s| s.parse().ok()).collect();
-            if parts.len() == 3 {
-                let latest_parts: Vec<u64> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
-                if parts > latest_parts {
-                    latest = ver_str.to_string();
-                }
-            }
-            pos = end;
-        } else {
-            pos += 1;
-        }
-    }
-
-    if latest.is_empty() {
-        return Err("No releases found".to_string());
-    }
-
+    let latest = release.tag_name.trim_start_matches('v').to_string();
     let semver_latest: Vec<u64> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
     let semver_current: Vec<u64> = current.split('.').filter_map(|s| s.parse().ok()).collect();
 
-    let release_url = format!("https://github.com/evolutions-code/evocode-tauri/releases/tag/v{}", latest);
-
     if semver_latest > semver_current {
-        Ok(format!("update_available__{}__{}__{}", latest, current, release_url))
+        Ok(format!("update_available__{}__{}__{}", latest, current, release.html_url))
     } else {
         Ok(format!("no_update__{}", current))
     }
@@ -265,7 +249,6 @@ async fn check_update() -> Result<String, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_opener::init())
         .manage(BridgeState::new(17761))
         .invoke_handler(tauri::generate_handler![
             start_bridge,
@@ -278,8 +261,8 @@ pub fn run() {
             get_bridge_logs,
             get_app_version,
             check_update,
+            open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

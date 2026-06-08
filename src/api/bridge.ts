@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+﻿import { invoke } from '@tauri-apps/api/core'
 
 export async function startBridge(): Promise<string> {
   return invoke<string>('start_bridge')
@@ -35,3 +35,12 @@ export async function getBridgeLogs(): Promise<string[]> {
 export async function getAppVersion(): Promise<string> {
   return invoke<string>('get_app_version')
 }
+
+export async function checkUpdate(): Promise<string> {
+  return invoke<string>('check_update')
+}
+
+export async function openUrl(url: string): Promise<void> {
+  return invoke<void>('open_url', { url })
+}
+

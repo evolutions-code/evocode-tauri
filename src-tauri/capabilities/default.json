@@ -19,6 +19,7 @@
     "shell:allow-kill",
     "shell:allow-open",
     "shell:allow-spawn",
-    "shell:allow-stdin-write"
+    "shell:allow-stdin-write",
+    "opener:default"
   ]
 }

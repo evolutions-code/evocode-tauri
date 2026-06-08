@@ -38,6 +38,17 @@
           <span class="dot ok" />
           <span>v{{ currentVersion || '0.0.0' }}</span>
         </div>
+        <a-button
+          v-if="!collapsed"
+          type="text"
+          size="small"
+          class="update-btn"
+          :loading="checkingUpdate"
+          @click="handleCheckUpdate"
+        >
+          <template #icon><DownloadOutlined v-if="!updateAvailable" /><ArrowDownOutlined v-else style="color: var(--ok)" /></template>
+          {{ updateText }}
+        </a-button>
         <a-tooltip :title="collapsed ? t('expand') : t('collapse')">
           <a-button
             type="text"
@@ -84,6 +95,29 @@
         </div>
       </a-layout-content>
     </a-layout>
+
+  <!-- Update modal -->
+  <a-modal
+    v-model:open="showUpdateModal"
+    :title="t('update.found')"
+    :footer="null"
+    :closable="true"
+    width="420px"
+    class="update-modal"
+    >
+    <div class="update-modal-body">
+      <ArrowDownOutlined class="update-modal-icon" />
+      <p class="update-modal-version">{{ t('update.modal_version') }} <strong>v{{ latestVersion }}</strong></p>
+      <p class="update-modal-current">{{ t('update.modal_current') }} v{{ currentVersion }}</p>
+      <a-button type="primary" size="large" block @click="downloadUpdate">
+        <template #icon><DownloadOutlined /></template>
+        {{ t('update.download') }}
+      </a-button>
+      <a-button size="small" type="text" block class="update-modal-skip" @click="showUpdateModal = false">
+        {{ t('update.modal_skip') }}
+      </a-button>
+    </div>
+  </a-modal>
   </a-layout>
 </template>
 
@@ -98,15 +132,24 @@ import {
   BulbOutlined,
   BulbFilled,
   ThunderboltOutlined,
+  DownloadOutlined,
+  ArrowDownOutlined,
 } from '@ant-design/icons-vue'
 import { useTheme } from '../composables/useTheme'
 import { useLocale } from '../composables/useLocale'
-import { getAppVersion } from '../api/bridge'
+import { message } from 'ant-design-vue'
+import { getAppVersion, checkUpdate } from '../api/bridge'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
 const currentVersion = ref('')
+const updateAvailable = ref(false)
+const updateUrl = ref('')
+const latestVersion = ref('')
+const checkingUpdate = ref(false)
+const showUpdateModal = ref(false)
 
 const { theme, toggle: themeToggle } = useTheme()
 const { locale, t, toggle: localeToggle } = useLocale()
@@ -116,6 +159,43 @@ const titleMap: Record<string, string> = {
   '/config': t('configuration'),
 }
 const currentTitle = computed(() => titleMap[route.path] || 'Page')
+
+const updateText = computed(() => {
+  if (checkingUpdate.value) return ''
+  if (updateAvailable.value) return 'v' + latestVersion.value
+  return t('update.check')
+})
+
+async function handleCheckUpdate() {
+  checkingUpdate.value = true
+  try {
+    const result = await checkUpdate()
+    const parts = result.split('__')
+    if (parts[0] === 'update_available') {
+      latestVersion.value = parts[1]
+      updateUrl.value = parts[3]
+      updateAvailable.value = true
+      showUpdateModal.value = true
+    } else {
+      latestVersion.value = ''
+      updateAvailable.value = false
+      message.success(t('update.up_to_date'), 2)
+    }
+  } catch {
+    message.error(t('update.error'), 3)
+  } finally {
+    checkingUpdate.value = false
+  }
+}
+async function downloadUpdate() {
+  try {
+    if (!updateUrl.value) { message.error("No update URL available"); return }
+    await openUrl(updateUrl.value)
+  } catch (e) {
+    console.error('Failed to open URL:', e)
+  }
+  showUpdateModal.value = false
+}
 
 function onMenuClick({ key }: { key: string }) {
   if (key !== route.path) router.push(key)
@@ -238,6 +318,18 @@ onMounted(async () => {
   margin: 0 auto;
 }
 .version-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.update-btn {
+  width: 100%;
+  color: var(--text-3);
+  font-size: 12px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.update-btn:hover { color: var(--text-1); background: var(--bg-elev-3); }
 .collapse-btn {
   width: 100%;
   color: var(--text-3);
@@ -295,4 +387,40 @@ onMounted(async () => {
   .app-sider { position: fixed; z-index: 20; }
 }
 </style>
+
+.update-modal-body {
+  text-align: center;
+  padding: 12px 0;
+}
+.update-modal-icon {
+  font-size: 48px;
+  color: var(--ok);
+  display: block;
+  margin: 0 auto 16px;
+}
+.update-modal-version {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.update-modal-current {
+  font-size: 13px;
+  color: var(--text-3);
+  margin-bottom: 20px;
+}
+.update-modal-skip {
+  margin-top: 8px;
+  color: var(--text-4);
+}
+.update-modal :deep(.ant-modal-header) {
+  text-align: center;
+}
+
+
+
+
+
+
+
 
