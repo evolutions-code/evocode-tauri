@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="config-view">
     <header class="page-head fade-up">
       <div>
@@ -16,16 +16,6 @@
         </a-button>
       </div>
     </header>
-
-    <a-alert
-      v-if="msg.text"
-      :type="msg.type"
-      :message="msg.text"
-      show-icon
-      closable
-      class="fade-up alert"
-      @close="msg.text = ''"
-    />
 
     <a-tabs v-model:activeKey="activeKey" class="config-tabs fade-up">
       <!-- ============== Connection ============== -->
@@ -270,6 +260,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted } from "vue"
+import { message } from "ant-design-vue"
 import {
   LeftOutlined,
   PlusOutlined,
@@ -359,7 +350,6 @@ const activeKey = ref("provider")
 const providerIds = ref<string[]>([])
 const newProviderName = ref("")
 const saving = ref(false)
-const msg = reactive({ text: "", type: "success" as "success" | "error" | "warning" })
 
 // Each provider keeps its own fields
 const providers = reactive<Record<string, Provider>>({})
@@ -671,26 +661,21 @@ function buildConfig(): string {
 
 async function handleSave() {
   if (!activeId.value) {
-    msg.text = "Add a provider first."
-    msg.type = "error"
+    message.warning("Add a provider first.")
     return
   }
   snapshotActive()
   const cur = providers[activeId.value]
   if (!cur?.model || !cur?.baseUrl) {
-    msg.text = `Fill in Model and Base URL for "${activeId.value}".`
-    msg.type = "error"
+    message.warning(`Fill in Model and Base URL for "${activeId.value}".`)
     return
   }
   saving.value = true
   try {
     await writeConfig(buildConfig())
-    msg.text = "Config saved! Restart the bridge to apply changes."
-    msg.type = "success"
-    setTimeout(() => { msg.text = "" }, 4000)
+    message.success("Config saved! Restart the bridge to apply changes.", 4)
   } catch (e: any) {
-    msg.text = "Failed to save: " + (e?.message || String(e))
-    msg.type = "error"
+    message.error("Failed to save: " + (e?.message || String(e)), 4)
   } finally {
     saving.value = false
   }
@@ -700,19 +685,15 @@ async function handleSave() {
 // save before calling this.
 async function handleSyncToCodex() {
   if (!activeId.value) {
-    msg.text = "Add a provider first."
-    msg.type = "error"
+    message.warning("Add a provider first.")
     return
   }
   saving.value = true
   try {
     await syncToCodex()
-    msg.text = "Synced to .codex/config.toml!"
-    msg.type = "success"
-    setTimeout(() => { msg.text = "" }, 4000)
+    message.success("Synced to .codex/config.toml!", 4)
   } catch (e: any) {
-    msg.text = "Failed to sync: " + (e?.message || String(e))
-    msg.type = "error"
+    message.error("Failed to sync: " + (e?.message || String(e)), 4)
   } finally {
     saving.value = false
   }
@@ -911,3 +892,4 @@ onMounted(async () => {
   .slider-stops { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
+
