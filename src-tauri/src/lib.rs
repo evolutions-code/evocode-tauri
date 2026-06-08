@@ -1,4 +1,4 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use tauri::State;
@@ -103,16 +103,21 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
     }
 
     state.logs.lock().unwrap().clear();
-    let config = load_config().map_err(|e| e.to_string())?;
+    let config = load_config().unwrap_or_default();
+    let codex_home = evocode_config::default_codex_home()
+        .map_err(|e| e.to_string())?;
 
     let mut cfg = ServerConfig::default();
-    cfg.providers = config.provider_routes();
+    cfg.codex_home = Some(codex_home);
     cfg.codex_config_overrides = config.codex_config_overrides();
     cfg.codex_env = config.codex_env();
-    cfg.model = Some(config.selected_model());
-    cfg.upstream_url = config.base_url().unwrap_or(DEFAULT_BASE_URL).to_string();
+    cfg.providers = config.provider_routes();
+    cfg.upstream_url = config.base_url().unwrap_or("http://127.0.0.1:17761").to_string();
     cfg.api_key = config.api_key().unwrap_or("").to_string();
+    cfg.api_key_header = config.api_key_header().to_string();
     cfg.protocol = config.protocol();
+    cfg.provider = config.provider.clone().unwrap_or_default();
+    cfg.web_fetch = evocode_proto::WebFetchHandler::with_default().ok();
 
     setup_logging(state.logs.clone());
 
@@ -282,4 +287,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
