@@ -2,6 +2,7 @@
   // Sidebar
   "dashboard": "Dashboard",
   "configuration": "Configuration",
+  "about": "About",
   "collapse": "Collapse",
   "expand": "Expand",
 

@@ -31,6 +31,10 @@
           <template #icon><SettingOutlined /></template>
           <span>{{ t("configuration") }}</span>
         </a-menu-item>
+        <a-menu-item key="/about">
+          <template #icon><InfoCircleOutlined /></template>
+          <span>{{ t("about") }}</span>
+        </a-menu-item>
       </a-menu>
 
       <div class="sider-footer">
@@ -134,6 +138,7 @@ import {
   ThunderboltOutlined,
   DownloadOutlined,
   ArrowDownOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons-vue'
 import { useTheme } from '../composables/useTheme'
 import { useLocale } from '../composables/useLocale'
@@ -416,6 +421,7 @@ onMounted(async () => {
 .update-modal :deep(.ant-modal-header) {
   text-align: center;
 }
+
 
 
 

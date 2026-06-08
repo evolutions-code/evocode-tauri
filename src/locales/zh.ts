@@ -2,6 +2,7 @@
   // Sidebar
   "dashboard": "仪表盘",
   "configuration": "配置",
+  "about": "关于",
   "collapse": "收起",
   "expand": "展开",
 

@@ -1,60 +1,6 @@
-﻿<template>
-  <div class="home">
-    <section class="hero glass fade-up">
-      <div class="hero-content">
-        <div class="eyebrow">
-          <span class="dot" />
-          <span>{{ t("hero.eyebrow") }}</span>
-        </div>
-        <h1>
-         <span class="gradient-text">evocode</span><br />
-        </h1>
-        <p class="lead" v-html="t('hero.lead', { url: '<code class=\'mono\'>http://127.0.0.1:17761</code>', name: '<span class=\'gradient-text\'>evocode</span>', c: '<code class=\'mono\'>/v1/chat/completions</code>', m: '<code class=\'mono\'>/v1/messages</code>', r: '<code class=\'mono\'>/responses</code>' })" />
-        <div class="hero-cta">
-          <a-button type="primary" size="large" class="cta" @click="goConfig">
-            <template #icon><SettingOutlined /></template>
-            {{ t("hero.configure") }}
-          </a-button>
-          <a-button size="large" class="cta-secondary" @click="scrollToLogs">
-            <template #icon><CodeOutlined /></template>
-            {{ t("hero.logs") }}
-          </a-button>
-        </div>
-
-        <div class="hero-stats">
-          <div class="stat">
-            <div class="num mono">17761</div>
-            <div class="lbl">{{ t("hero.default_port") }}</div>
-          </div>
-          <div class="sep" />
-          <div class="stat">
-            <div class="num">v<span class="mono">{{ currentVersion || '0.0.0' }}</span></div>
-            <div class="lbl">{{ t("hero.bridge_version") }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-art" aria-hidden="true">
-        <div class="orb orb-a" />
-        <div class="orb orb-b" />
-        <div class="orb orb-c" />
-        <div class="grid-bg" />
-        <div class="card-stack">
-          <div class="mini-card">
-            <span class="kv-key">model_provider</span>
-            <code class="mono">"anthropic"</code>
-          </div>
-          <div class="mini-card">
-            <span class="kv-key">base_url</span>
-            <code class="mono">http://127.0.0.1:17761</code>
-          </div>
-          <div class="mini-card">
-            <span class="kv-key">wire_api</span>
-            <code class="mono">"responses"</code>
-          </div>
-        </div>
-      </div>
-    </section>
+<template>
+<div class="home">
+    
 
     <section class="row">
       <BridgeStatus
@@ -107,7 +53,7 @@
 import { ref, onMounted } from "vue"
 import { useLocale } from "../composables/useLocale"
 import { useRouter } from "vue-router"
-import { SettingOutlined, CodeOutlined, CopyOutlined } from "@ant-design/icons-vue"
+import { CopyOutlined } from "@ant-design/icons-vue"
 import { startBridge, stopBridge, getBridgeStatus, readConfig, getAppVersion } from "../api/bridge"
 import BridgeStatus from "../components/BridgeStatus.vue"
 import LogPanel from "../components/LogPanel.vue"
@@ -140,9 +86,6 @@ async function toggleBridge() {
   try { await startBridge(); await updateStatus() }
   finally { loading.value = false }
 }
-
-function goConfig() { router.push("/config") }
-function scrollToLogs() { logsRef.value?.scrollIntoView({ behavior: "smooth", block: "start" }) }
 
 const SNIPPET = `model = "MiniMax-M3"
 model_provider = "anthropic"
