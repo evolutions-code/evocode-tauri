@@ -143,7 +143,8 @@ import {
 import { useTheme } from '../composables/useTheme'
 import { useLocale } from '../composables/useLocale'
 import { message } from 'ant-design-vue'
-import { getAppVersion, checkUpdate } from '../api/bridge'
+import { getAppVersion } from '../api/bridge'
+import { checkUpdate, type CheckUpdateResult } from '../api/check_update'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 const route = useRoute()
@@ -175,10 +176,9 @@ async function handleCheckUpdate() {
   checkingUpdate.value = true
   try {
     const result = await checkUpdate()
-    const parts = result.split('__')
-    if (parts[0] === 'update_available') {
-      latestVersion.value = parts[1]
-      updateUrl.value = parts[3]
+    if (result.hasUpdate) {
+      latestVersion.value = result.latestVersion
+      updateUrl.value = result.releaseUrl
       updateAvailable.value = true
       showUpdateModal.value = true
     } else {
@@ -210,6 +210,21 @@ onMounted(async () => {
   try {
     currentVersion.value = await getAppVersion()
   } catch {}
+  // auto-check update on first launch
+  checkingUpdate.value = true
+  try {
+    const result = await checkUpdate()
+    if (result.hasUpdate) {
+      latestVersion.value = result.latestVersion
+      updateUrl.value = result.releaseUrl
+      updateAvailable.value = true
+      showUpdateModal.value = true
+    }
+  } catch {
+    // silent fail for auto-check
+  } finally {
+    checkingUpdate.value = false
+  }
 })
 </script>
 
@@ -421,6 +436,7 @@ onMounted(async () => {
 .update-modal :deep(.ant-modal-header) {
   text-align: center;
 }
+
 
 
 

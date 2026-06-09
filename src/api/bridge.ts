@@ -36,10 +36,7 @@ export async function getAppVersion(): Promise<string> {
   return invoke<string>('get_app_version')
 }
 
-export async function checkUpdate(): Promise<string> {
-  return invoke<string>('check_update')
-}
-
+export { checkUpdate, type CheckUpdateResult } from './check_update'
 export async function openUrl(url: string): Promise<void> {
   return invoke<void>('open_url', { url })
 }
