@@ -79,13 +79,7 @@
           </a-breadcrumb>
         </div>
         <div class="header-right">
-          <a-tooltip :title="theme === 'dark' ? t('theme.dark') : t('theme.light')">
-            <a-button type="text" class="icon-btn" @click="themeToggle">
-              <BulbOutlined v-if="theme === 'dark'" />
-              <BulbFilled v-else />
-            </a-button>
-          </a-tooltip>
-          <a-tooltip :title="locale === 'en' ? '\u4e2d\u6587' : 'English'">
+<a-tooltip :title="locale === 'en' ? '\u4e2d\u6587' : 'English'">
             <a-button type="text" class="icon-btn lang-btn" @click="localeToggle">
               {{ locale === 'en' ? 'EN' : '\u4e2d\u6587' }}
             </a-button>
@@ -133,14 +127,11 @@ import {
   SettingOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BulbOutlined,
-  BulbFilled,
   ThunderboltOutlined,
   DownloadOutlined,
   ArrowDownOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons-vue'
-import { useTheme } from '../composables/useTheme'
 import { useLocale } from '../composables/useLocale'
 import { message } from 'ant-design-vue'
 import { getAppVersion } from '../api/bridge'
@@ -157,7 +148,6 @@ const latestVersion = ref('')
 const checkingUpdate = ref(false)
 const showUpdateModal = ref(false)
 
-const { theme, toggle: themeToggle } = useTheme()
 const { locale, t, toggle: localeToggle } = useLocale()
 
 const titleMap: Record<string, string> = {
