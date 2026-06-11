@@ -118,7 +118,6 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
     cfg.api_key_header = config.api_key_header().to_string();
     cfg.protocol = config.protocol();
     cfg.provider = config.provider.clone().unwrap_or_default();
-    cfg.web_fetch = evocode_proto::WebFetchHandler::with_default().ok();
 
     setup_logging(state.logs.clone());
 
