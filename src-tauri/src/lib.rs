@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+﻿use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use serde::Serialize;
 
@@ -321,15 +321,28 @@ async fn get_sessions() -> Result<Vec<SessionInfo>, String> {
     }
 
     fn model_cw(model: &str, default: u32) -> u32 {
-        match model {
-            m if m.starts_with("deepseek") => 256_000,
-            m if m.starts_with("MiniMax") => 256_000,
-            m if m.starts_with("step") => 256_000,
-            m if m.starts_with("gpt-5") => 256_000,
-            m if m.starts_with("gpt-4") => 128_000,
-            m if m.starts_with("claude") => 200_000,
-            _ => default,
+        // Try to read the real context_window from models_catalog.json
+        let codex_home = dirs::home_dir().map(|h| h.join(".codex"));
+        if let Some(home) = codex_home {
+            let catalog_path = home.join("models_catalog.json");
+            if let Ok(json_str) = std::fs::read_to_string(&catalog_path) {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                    if let Some(models) = parsed.get("models").and_then(|m| m.as_array()) {
+                        for m in models {
+                            if let Some(slug) = m.get("slug").and_then(|s| s.as_str()) {
+                                if slug == model {
+                                    if let Some(cw) = m.get("context_window").and_then(|c| c.as_u64()) {
+                                        return cw as u32;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+        // Fallback to default from config.toml
+        default
     }
 
     use sqlx::sqlite::SqlitePoolOptions;
@@ -395,3 +408,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
