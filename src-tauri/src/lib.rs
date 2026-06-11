@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use serde::Serialize;
 
 use tauri::State;
 use tokio::sync::Mutex as AsyncMutex;
@@ -266,6 +267,112 @@ async fn check_update() -> Result<String, String> {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct SessionInfo {
+    pub id: String,
+    pub name: String,
+    pub model: String,
+    pub total: u32,
+    pub used: u32,
+}
+
+#[tauri::command]
+async fn get_sessions() -> Result<Vec<SessionInfo>, String> {
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let codex_home = home.join(".codex");
+
+    // Find the latest state_*.sqlite file
+    let db_path = std::fs::read_dir(&codex_home)
+        .ok()
+        .and_then(|entries| {
+            let mut best: Option<std::path::PathBuf> = None;
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.starts_with("state_") && name.ends_with(".sqlite") {
+                        match best {
+                            None => best = Some(path),
+                            Some(ref current) => {
+                                let n_cur = current.file_stem().and_then(|s| s.to_str()).unwrap_or("").trim_start_matches("state_").trim_end_matches(".sqlite").parse::<u32>().unwrap_or(0);
+                                let n_new = name.trim_start_matches("state_").trim_end_matches(".sqlite").parse::<u32>().unwrap_or(0);
+                                if n_new > n_cur {
+                                    best = Some(path);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            best
+        })
+        .ok_or_else(|| "Cannot find state database".to_string())?;
+
+    if !db_path.exists() { return Ok(Vec::new()); }
+
+    // Read default context_window from config
+    let mut default_cw: u32 = 256_000;
+    if let Ok(content) = std::fs::read_to_string(codex_home.join("config.toml")) {
+        for line in content.lines() {
+            let line = line.trim();
+            if let Some(val) = line.strip_prefix("model_context_window = ") {
+                if let Ok(n) = val.trim().trim_matches('"').parse::<u32>() { default_cw = n; break; }
+            }
+        }
+    }
+
+    fn model_cw(model: &str, default: u32) -> u32 {
+        match model {
+            m if m.starts_with("deepseek") => 256_000,
+            m if m.starts_with("MiniMax") => 256_000,
+            m if m.starts_with("step") => 256_000,
+            m if m.starts_with("gpt-5") => 256_000,
+            m if m.starts_with("gpt-4") => 128_000,
+            m if m.starts_with("claude") => 200_000,
+            _ => default,
+        }
+    }
+
+    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::Row;
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect(&format!("sqlite://{}?mode=ro", db_path.display()))
+        .await
+        .map_err(|e| format!("DB error: {}", e))?;
+
+    let rows = sqlx::query(
+        "SELECT id, title, model, tokens_used
+         FROM threads
+         WHERE archived = 0 AND title != '' AND tokens_used > 0
+         ORDER BY updated_at DESC
+         LIMIT 8"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Query error: {}", e))?;
+
+    pool.close().await;
+
+    let sessions: Vec<SessionInfo> = rows.iter().map(|row| {
+        let id: String = row.get("id");
+        let name: String = row.get("title");
+        let model: String = row.get("model");
+        let tokens: u32 = row.get::<u32, _>("tokens_used");
+        let cw = model_cw(&model, default_cw);
+        SessionInfo {
+            id,
+            name,
+            model,
+            total: (cw + 9999) / 10000,
+            used: std::cmp::min((tokens + 9999) / 10000, (cw + 9999) / 10000),
+        }
+    }).collect();
+
+    Ok(sessions)
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -283,6 +390,7 @@ pub fn run() {
             get_bridge_logs,
             get_app_version,
             check_update,
+            get_sessions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

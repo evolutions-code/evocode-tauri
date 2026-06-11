@@ -7,6 +7,12 @@
     <div class="meta">
       <div class="label">{{ statusLabel }}</div>
       <div class="sub">{{ status === 'running' ? t('bridge.serving') : status === 'starting' ? t('bridge.booting') : t('bridge.idle') }}</div>
+      <div class="provider">
+        <span class="dot" :class="status" />
+        <span>{{ status }}</span>
+        <span class="sep" />
+        <span class="mono">{{ props.provider || '-' }}</span>
+      </div>
     </div>
     <div class="url mono">
       <span class="url-label">{{ t("bridge.url") }}</span>
@@ -43,6 +49,7 @@ const { t } = useLocale()
 const props = defineProps<{
   status: string
   loading: boolean
+  provider?: string
 }>()
 
 defineEmits<{
@@ -120,6 +127,21 @@ function copyUrl() {
 .meta { grid-area: meta; min-width: 0; }
 .meta .label { font-size: 16px; font-weight: 600; color: var(--text-1); }
 .meta .sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.meta .provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.meta .provider .dot {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+}
+.meta .provider .dot.running { background: var(--ok); }
+.meta .provider .dot.stopped { background: var(--text-4); }
+.meta .provider .sep { width: 1px; height: 12px; background: var(--border); display: inline-block; }
+.meta .provider .mono { font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace; color: var(--text-2); }
 
 .url {
   grid-area: url;

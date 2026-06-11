@@ -41,3 +41,16 @@ export async function openUrl(url: string): Promise<void> {
   return invoke<void>('open_url', { url })
 }
 
+
+
+export interface SessionInfo {
+  id: string
+  name: string
+  model: string
+  total: number
+  used: number
+}
+
+export async function getSessions(): Promise<SessionInfo[]> {
+  return invoke<SessionInfo[]>('get_sessions')
+}

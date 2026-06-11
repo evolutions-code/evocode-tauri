@@ -156,7 +156,7 @@ onUnmounted(stopPolling)
 .icon-btn:hover { color: var(--text-1); background: var(--bg-elev-3); }
 
 .log-body {
-  height: 360px;
+  height: 180px;
   overflow-y: auto;
   font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
   font-size: 12.5px;
