@@ -18,6 +18,43 @@
     </header>
 
     <a-tabs v-model:activeKey="activeKey" class="config-tabs fade-up">
+      <!-- ============== General ============== -->
+      <a-tab-pane key="general" :tab="t('config.tab.general')">
+        <div class="glass panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">{{ t("config.general.title") }}</div>
+              <div class="panel-sub muted-3">{{ t("config.general.desc") }}</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-name">{{ t("config.autostart.title") }}</div>
+              <div class="setting-desc muted-3">{{ t("config.autostart.desc") }}</div>
+            </div>
+            <a-switch
+              :checked="autostartEnabled"
+              :loading="autostartLoading"
+              @change="onAutostartChange"
+            />
+          </div>
+
+          <a-divider class="row-divider" />
+
+          <div class="setting-row">
+            <div class="setting-meta">
+              <div class="setting-name">{{ t("config.configdir.title") }}</div>
+              <div class="setting-desc muted-3">{{ configDirHint }}</div>
+            </div>
+            <a-button @click="openConfigDir" :loading="openingDir">
+              <template #icon><FolderOpenOutlined /></template>
+              {{ t("config.configdir.open") }}
+            </a-button>
+          </div>
+        </div>
+      </a-tab-pane>
+
       <!-- ============== Connection ============== -->
       <a-tab-pane key="provider" :tab="t('config.tab.connection')">
         <!-- Top: provider chips for switch / add / remove -->
@@ -89,11 +126,33 @@
               <div class="panel-title">{{ t("config.form.title") }}</div>
               <div class="panel-sub muted-3">{{ t("config.form.desc") }} <code class="mono">[providers.{{ activeId || '...' }}]</code>.</div>
             </div>
-            <a-button size="small" :disabled="!activeId" @click="resetForm">
-              <template #icon><ReloadOutlined /></template>
-              Reset
-            </a-button>
+            <div class="head-actions">
+              <a-button
+                size="small"
+                :disabled="!activeId || !formState.baseUrl"
+                :loading="testingConn"
+                @click="testConnection"
+              >
+                <template #icon><ApiOutlined /></template>
+                {{ t("config.form.test") }}
+              </a-button>
+              <a-button size="small" :disabled="!activeId" @click="resetForm">
+                <template #icon><ReloadOutlined /></template>
+                Reset
+              </a-button>
+            </div>
           </div>
+
+          <a-alert
+            v-if="connResult"
+            class="conn-alert"
+            :type="connResult.ok ? 'success' : 'error'"
+            :message="connResult.message"
+            :description="t('config.form.test_latency') + ': ' + connResult.latency_ms + ' ms'"
+            show-icon
+            closable
+            @close="connResult = null"
+          />
 
           <a-empty
             v-if="!activeId"
@@ -272,8 +331,10 @@ import {
   ApiOutlined,
   MessageOutlined,
   RocketOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons-vue"
-import { readConfig, writeConfig, syncToCodex } from "../api/bridge"
+import { readConfig, writeConfig, syncToCodex, testProviderConnectivity, openConfigDir as openConfigDirApi } from "../api/bridge"
+import { isAutostartEnabled, enableAutostart, disableAutostart } from "../api/autostart"
 
 interface Provider {
   providerId: string
@@ -347,10 +408,22 @@ const RATIO_TICKS = [10, 25, 50, 75, 90]
 
 const { t } = useLocale()
 
-const activeKey = ref("provider")
+const activeKey = ref("general")
 const providerIds = ref<string[]>([])
 const newProviderName = ref("")
 const saving = ref(false)
+
+// Autostart state
+const autostartEnabled = ref(false)
+const autostartLoading = ref(false)
+
+// Open config dir state
+const openingDir = ref(false)
+const configDirHint = ref("")
+
+// Provider connectivity test state
+const testingConn = ref(false)
+const connResult = ref<null | { ok: boolean; status: number; latency_ms: number; message: string }>(null)
 
 // Each provider keeps its own fields
 const providers = reactive<Record<string, Provider>>({})
@@ -699,11 +772,90 @@ async function handleSyncToCodex() {
   }
 }
 
+async function loadAutostartStatus() {
+  try {
+    autostartEnabled.value = await isAutostartEnabled()
+  } catch {
+    autostartEnabled.value = false
+  }
+}
+
+async function onAutostartChange(next: boolean) {
+  autostartLoading.value = true
+  const prev = autostartEnabled.value
+  // Optimistic toggle; revert on failure.
+  autostartEnabled.value = next
+  try {
+    if (next) {
+      await enableAutostart()
+      message.success(t("config.autostart.enabled"), 3)
+    } else {
+      await disableAutostart()
+      message.success(t("config.autostart.disabled"), 3)
+    }
+  } catch (e: any) {
+    autostartEnabled.value = prev
+    message.error(
+      t("config.autostart.error") + ": " + (e?.message || String(e)),
+      4,
+    )
+  } finally {
+    autostartLoading.value = false
+  }
+}
+
+function buildConfigDirHint() {
+  // Show the conventional path; the renderer cannot resolve USERPROFILE.
+  const sep = navigator?.platform?.toLowerCase().includes("win") ? "\\" : "/"
+  configDirHint.value = `~/.evocode${sep}config.toml`
+}
+
+async function openConfigDir() {
+  openingDir.value = true
+  try {
+    const path = await openConfigDirApi()
+    message.success(t("config.configdir.opened") + ": " + path, 3)
+  } catch (e: any) {
+    message.error(t("config.configdir.error") + ": " + (e?.message || String(e)), 4)
+  } finally {
+    openingDir.value = false
+  }
+}
+
+async function testConnection() {
+  if (!formState.baseUrl) {
+    message.warning(t("config.form.test_need_url"))
+    return
+  }
+  testingConn.value = true
+  connResult.value = null
+  try {
+    const r = await testProviderConnectivity(
+      formState.baseUrl,
+      formState.apiKey || "",
+      formState.wireApi || "anthropic",
+      formState.apiKeyHeader || undefined,
+    )
+    connResult.value = r
+  } catch (e: any) {
+    connResult.value = {
+      ok: false,
+      status: 0,
+      latency_ms: 0,
+      message: t("config.form.test_error") + ": " + (e?.message || String(e)),
+    }
+  } finally {
+    testingConn.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     const text = await readConfig()
     parseConfig(text)
   } catch {}
+  buildConfigDirHint()
+  await loadAutostartStatus()
 })
 </script>
 
@@ -886,10 +1038,23 @@ onMounted(async () => {
   box-shadow: var(--shadow-md);
 }
 
+.head-actions { display: inline-flex; gap: 8px; align-items: center; }
+
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 14px 4px;
+}
+.setting-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.setting-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.setting-desc { font-size: 12.5px; color: var(--text-3); }
+.row-divider { margin: 4px 0; border-color: var(--border); }
+
+.conn-alert { margin-bottom: 16px; }
+
 @media (max-width: 720px) {
   .actions { justify-content: stretch; }
   .actions .ant-btn { flex: 1; }
   .slider-stops { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
-

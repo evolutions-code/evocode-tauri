@@ -1,14 +1,14 @@
+use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use serde::Serialize;
 
+use evocode_config::load_config;
+use evocode_proto::ServerConfig;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Mutex as AsyncMutex;
-use evocode_config::load_config;
-use evocode_proto::{ServerConfig};
 
 pub struct BridgeState {
     handle: Arc<AsyncMutex<Option<tokio::task::JoinHandle<()>>>>,
@@ -46,8 +46,15 @@ fn setup_logging(logs: Arc<Mutex<Vec<String>>>) {
     // so log lines are no longer fixed to UTC.
     struct LocalTimer;
     impl tracing_subscriber::fmt::time::FormatTime for LocalTimer {
-        fn format_time(&self, w: &mut tracing_subscriber::fmt::format::Writer<'_>) -> std::fmt::Result {
-            write!(w, "{}", chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%z"))
+        fn format_time(
+            &self,
+            w: &mut tracing_subscriber::fmt::format::Writer<'_>,
+        ) -> std::fmt::Result {
+            write!(
+                w,
+                "{}",
+                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f%z")
+            )
         }
     }
     let _ = tracing_subscriber::fmt()
@@ -61,13 +68,17 @@ fn setup_logging(logs: Arc<Mutex<Vec<String>>>) {
                         let s = strip_ansi(s);
                         if !s.is_empty() {
                             let mut g = self.0.lock().unwrap();
-                            if g.len() >= 1000 { g.remove(0); }
+                            if g.len() >= 1000 {
+                                g.remove(0);
+                            }
                             g.push(s.trim_end().to_string());
                         }
                     }
                     Ok(buf.len())
                 }
-                fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+                fn flush(&mut self) -> std::io::Result<()> {
+                    Ok(())
+                }
             }
             W(logs.clone())
         })
@@ -82,8 +93,13 @@ fn strip_ansi(s: &str) -> String {
             if chars.next() == Some('[') {
                 while let Some(&ch) = chars.peek() {
                     match ch {
-                        '0'..='9' | ';' => { chars.next(); }
-                        'm' => { chars.next(); break; }
+                        '0'..='9' | ';' => {
+                            chars.next();
+                        }
+                        'm' => {
+                            chars.next();
+                            break;
+                        }
                         _ => break,
                     }
                 }
@@ -92,9 +108,19 @@ fn strip_ansi(s: &str) -> String {
             let mut buf = String::from("[");
             while let Some(&ch) = chars.peek() {
                 match ch {
-                    '0'..='9' | ';' => { buf.push(ch); chars.next(); }
-                    'm' => { buf.push('m'); chars.next(); break; }
-                    _ => { buf.clear(); break; }
+                    '0'..='9' | ';' => {
+                        buf.push(ch);
+                        chars.next();
+                    }
+                    'm' => {
+                        buf.push('m');
+                        chars.next();
+                        break;
+                    }
+                    _ => {
+                        buf.clear();
+                        break;
+                    }
                 }
             }
             if !buf.is_empty() && buf != "[" {
@@ -117,19 +143,23 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
 
     state.logs.lock().unwrap().clear();
     let config = load_config().unwrap_or_default();
-    let codex_home = evocode_config::default_codex_home()
-        .map_err(|e| e.to_string())?;
+    let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
 
-    let mut cfg = ServerConfig::default();
-    cfg.codex_home = Some(codex_home);
-    cfg.codex_config_overrides = config.codex_config_overrides();
-    cfg.codex_env = config.codex_env();
-    cfg.providers = config.provider_routes();
-    cfg.upstream_url = config.base_url().unwrap_or("http://127.0.0.1:17761").to_string();
-    cfg.api_key = config.api_key().unwrap_or("").to_string();
-    cfg.api_key_header = config.api_key_header().to_string();
-    cfg.protocol = config.protocol();
-    cfg.provider = config.provider.clone().unwrap_or_default();
+    let cfg = ServerConfig {
+        codex_home: Some(codex_home),
+        codex_config_overrides: config.codex_config_overrides(),
+        codex_env: config.codex_env(),
+        providers: config.provider_routes(),
+        upstream_url: config
+            .base_url()
+            .unwrap_or("http://127.0.0.1:17761")
+            .to_string(),
+        api_key: config.api_key().unwrap_or("").to_string(),
+        api_key_header: config.api_key_header().to_string(),
+        protocol: config.protocol(),
+        provider: config.provider.clone().unwrap_or_default(),
+        ..Default::default()
+    };
 
     setup_logging(state.logs.clone());
 
@@ -163,7 +193,12 @@ async fn stop_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
 #[tauri::command]
 async fn bridge_status(state: State<'_, BridgeState>) -> Result<String, String> {
     let handle_guard = state.handle.lock().await;
-    Ok(if handle_guard.is_some() { "running" } else { "stopped" }.into())
+    Ok(if handle_guard.is_some() {
+        "running"
+    } else {
+        "stopped"
+    }
+    .into())
 }
 
 #[tauri::command]
@@ -179,27 +214,30 @@ async fn get_bridge_logs(state: State<'_, BridgeState>) -> Result<Vec<String>, S
 
 #[tauri::command]
 async fn read_config() -> Result<String, String> {
-    let config_path = get_config_path()
-        .ok_or_else(|| "Cannot find config directory".to_string())?;
+    let config_path =
+        get_config_path().ok_or_else(|| "Cannot find config directory".to_string())?;
 
     if !config_path.exists() {
         return Ok(String::new());
     }
 
-    tokio::fs::read_to_string(&config_path).await.map_err(|e| e.to_string())
+    tokio::fs::read_to_string(&config_path)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn write_config(content: String) -> Result<(), String> {
-    let config_path = get_config_path()
-        .ok_or_else(|| "Cannot find config directory".to_string())?;
+    let config_path =
+        get_config_path().ok_or_else(|| "Cannot find config directory".to_string())?;
 
     tokio::fs::create_dir_all(config_path.parent().unwrap())
-        .await.map_err(|e| e.to_string())?;
-    tokio::fs::write(&config_path, content).await.map_err(|e| e.to_string())
+        .await
+        .map_err(|e| e.to_string())?;
+    tokio::fs::write(&config_path, content)
+        .await
+        .map_err(|e| e.to_string())
 }
-
-
 
 #[tauri::command]
 async fn sync_to_codex() -> Result<(), String> {
@@ -208,18 +246,142 @@ async fn sync_to_codex() -> Result<(), String> {
     // block only writes name, requires_openai_auth, and the local bridge
     // URL (127.0.0.1:17761). Other Codex config keys are left untouched.
     let config = evocode_config::load_config().map_err(|e| e.to_string())?;
-    let codex_home = evocode_config::default_codex_home()
-        .map_err(|e| e.to_string())?;
+    let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
     config
         .sync_active_provider_to_codex(&codex_home)
         .map_err(|e| e.to_string())
+}
+
+#[derive(Serialize)]
+pub struct ConnectivityResult {
+    pub ok: bool,
+    pub status: u16,
+    pub latency_ms: u128,
+    pub message: String,
+}
+
+#[tauri::command]
+async fn test_provider_connectivity(
+    base_url: String,
+    api_key: String,
+    wire_api: String,
+    api_key_header: Option<String>,
+) -> Result<ConnectivityResult, String> {
+    // Trim trailing slash and pick the right probe endpoint per protocol.
+    let base = base_url.trim_end_matches('/').to_string();
+    if base.is_empty() {
+        return Err("Base URL is empty".into());
+    }
+
+    // Pick a probe endpoint that is cheap and indicates the upstream is alive.
+    // Anthropic: GET /v1/messages (returns 405 for GET, but proves reachability + auth wiring).
+    // OpenAI-compatible (chat_completions / openai Responses): GET /models (returns 200 or 401).
+    let probe_path = match wire_api.as_str() {
+        "anthropic" => "/v1/messages",
+        _ => "/models",
+    };
+    let url = format!("{}{}", base, probe_path);
+
+    let header_name = api_key_header
+        .as_deref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .unwrap_or(if wire_api == "anthropic" {
+            "X-Api-Key"
+        } else {
+            "Authorization"
+        });
+
+    let header_value = if wire_api == "anthropic" {
+        api_key.clone()
+    } else if header_name.eq_ignore_ascii_case("Authorization") {
+        format!("Bearer {}", api_key)
+    } else {
+        api_key.clone()
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let started = std::time::Instant::now();
+    let resp = client
+        .get(&url)
+        .header(header_name, header_value)
+        .header("Accept", "application/json")
+        .send()
+        .await;
+    let latency_ms = started.elapsed().as_millis();
+
+    match resp {
+        Ok(r) => {
+            let status = r.status().as_u16();
+            // Treat anything < 500 (incl. 401/403/404/405) as reachable.
+            // 5xx and connection-level failures are considered not ok.
+            let ok = status < 500;
+            let message = if ok {
+                if (200..300).contains(&status) {
+                    format!("Reachable (HTTP {})", status)
+                } else if status == 401 || status == 403 {
+                    format!("Reachable, auth rejected (HTTP {})", status)
+                } else if status == 404 || status == 405 {
+                    format!("Reachable, endpoint not found (HTTP {})", status)
+                } else {
+                    format!("Reachable (HTTP {})", status)
+                }
+            } else {
+                format!("Server error (HTTP {})", status)
+            };
+            Ok(ConnectivityResult {
+                ok,
+                status,
+                latency_ms,
+                message,
+            })
+        }
+        Err(e) => {
+            let kind = if e.is_timeout() {
+                "timeout"
+            } else if e.is_connect() {
+                "connect failed"
+            } else {
+                "request failed"
+            };
+            Ok(ConnectivityResult {
+                ok: false,
+                status: 0,
+                latency_ms,
+                message: format!("{}: {}", kind, e),
+            })
+        }
+    }
+}
+
+#[tauri::command]
+async fn open_config_dir(app: AppHandle) -> Result<String, String> {
+    // Ensure ~/.evocode exists, then open it with the system file manager.
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .ok_or_else(|| "Cannot find home directory".to_string())?;
+    let dir = home.join(".evocode");
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|e| format!("Failed to create {}: {}", dir.display(), e))?;
+
+    let path_str = dir.to_string_lossy().to_string();
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_path(path_str.clone(), None::<&str>)
+        .map_err(|e| e.to_string())?;
+    Ok(path_str)
 }
 
 #[tauri::command]
 async fn get_app_version() -> Result<String, String> {
     Ok(env!("CARGO_PKG_VERSION").into())
 }
-
 
 #[tauri::command]
 async fn check_update() -> Result<String, String> {
@@ -232,7 +394,10 @@ async fn check_update() -> Result<String, String> {
 
     let html = client
         .get("https://github.com/evolutions-code/evocode-tauri/releases")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        )
         .send()
         .await
         .map_err(|_| "Network error: cannot reach GitHub".to_string())?
@@ -250,13 +415,19 @@ async fn check_update() -> Result<String, String> {
         if bytes[pos..].starts_with(prefix) {
             let start = pos + prefix.len();
             let mut end = start;
-            while end < bytes.len() && bytes[end] != b'<' && bytes[end] != b'"' && bytes[end] != b' ' && bytes[end] != b'>' {
+            while end < bytes.len()
+                && bytes[end] != b'<'
+                && bytes[end] != b'"'
+                && bytes[end] != b' '
+                && bytes[end] != b'>'
+            {
                 end += 1;
             }
             let ver_str = std::str::from_utf8(&bytes[start..end]).unwrap_or("");
             let parts: Vec<u64> = ver_str.split('.').filter_map(|s| s.parse().ok()).collect();
             if parts.len() == 3 {
-                let latest_parts: Vec<u64> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
+                let latest_parts: Vec<u64> =
+                    latest.split('.').filter_map(|s| s.parse().ok()).collect();
                 if parts > latest_parts {
                     latest = ver_str.to_string();
                 }
@@ -274,10 +445,16 @@ async fn check_update() -> Result<String, String> {
     let semver_latest: Vec<u64> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
     let semver_current: Vec<u64> = current.split('.').filter_map(|s| s.parse().ok()).collect();
 
-    let release_url = format!("https://github.com/evolutions-code/evocode-tauri/releases/tag/v{}", latest);
+    let release_url = format!(
+        "https://github.com/evolutions-code/evocode-tauri/releases/tag/v{}",
+        latest
+    );
 
     if semver_latest > semver_current {
-        Ok(format!("update_available__{}__{}__{}", latest, current, release_url))
+        Ok(format!(
+            "update_available__{}__{}__{}",
+            latest, current, release_url
+        ))
     } else {
         Ok(format!("no_update__{}", current))
     }
@@ -318,16 +495,28 @@ async fn get_sessions(offset: u32, limit: u32) -> Result<SessionsResponse, Strin
             let mut best: Option<std::path::PathBuf> = None;
             for entry in entries.flatten() {
                 let path = entry.path();
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if name.starts_with("state_") && name.ends_with(".sqlite") {
-                        match best {
-                            None => best = Some(path),
-                            Some(ref current) => {
-                                let n_cur = current.file_stem().and_then(|s| s.to_str()).unwrap_or("").trim_start_matches("state_").trim_end_matches(".sqlite").parse::<u32>().unwrap_or(0);
-                                let n_new = name.trim_start_matches("state_").trim_end_matches(".sqlite").parse::<u32>().unwrap_or(0);
-                                if n_new > n_cur {
-                                    best = Some(path);
-                                }
+                if let Some(name) = path.file_name().and_then(|n| n.to_str())
+                    && name.starts_with("state_")
+                    && name.ends_with(".sqlite")
+                {
+                    match best {
+                        None => best = Some(path),
+                        Some(ref current) => {
+                            let n_cur = current
+                                .file_stem()
+                                .and_then(|s| s.to_str())
+                                .unwrap_or("")
+                                .trim_start_matches("state_")
+                                .trim_end_matches(".sqlite")
+                                .parse::<u32>()
+                                .unwrap_or(0);
+                            let n_new = name
+                                .trim_start_matches("state_")
+                                .trim_end_matches(".sqlite")
+                                .parse::<u32>()
+                                .unwrap_or(0);
+                            if n_new > n_cur {
+                                best = Some(path);
                             }
                         }
                     }
@@ -337,15 +526,23 @@ async fn get_sessions(offset: u32, limit: u32) -> Result<SessionsResponse, Strin
         })
         .ok_or_else(|| "Cannot find state database".to_string())?;
 
-    if !db_path.exists() { return Ok(SessionsResponse { sessions: Vec::new(), total: 0 }); }
+    if !db_path.exists() {
+        return Ok(SessionsResponse {
+            sessions: Vec::new(),
+            total: 0,
+        });
+    }
 
     // Read default context_window from config
     let mut default_cw: u32 = 256_000;
     if let Ok(content) = std::fs::read_to_string(codex_home.join("config.toml")) {
         for line in content.lines() {
             let line = line.trim();
-            if let Some(val) = line.strip_prefix("model_context_window = ") {
-                if let Ok(n) = val.trim().trim_matches('"').parse::<u32>() { default_cw = n; break; }
+            if let Some(val) = line.strip_prefix("model_context_window = ")
+                && let Ok(n) = val.trim().trim_matches('"').parse::<u32>()
+            {
+                default_cw = n;
+                break;
             }
         }
     }
@@ -355,18 +552,16 @@ async fn get_sessions(offset: u32, limit: u32) -> Result<SessionsResponse, Strin
         let codex_home = dirs::home_dir().map(|h| h.join(".codex"));
         if let Some(home) = codex_home {
             let catalog_path = home.join("models_catalog.json");
-            if let Ok(json_str) = std::fs::read_to_string(&catalog_path) {
-                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str) {
-                    if let Some(models) = parsed.get("models").and_then(|m| m.as_array()) {
-                        for m in models {
-                            if let Some(slug) = m.get("slug").and_then(|s| s.as_str()) {
-                                if slug == model {
-                                    if let Some(cw) = m.get("context_window").and_then(|c| c.as_u64()) {
-                                        return cw as u32;
-                                    }
-                                }
-                            }
-                        }
+            if let Ok(json_str) = std::fs::read_to_string(&catalog_path)
+                && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_str)
+                && let Some(models) = parsed.get("models").and_then(|m| m.as_array())
+            {
+                for m in models {
+                    if let Some(slug) = m.get("slug").and_then(|s| s.as_str())
+                        && slug == model
+                        && let Some(cw) = m.get("context_window").and_then(|c| c.as_u64())
+                    {
+                        return cw as u32;
                     }
                 }
             }
@@ -375,8 +570,8 @@ async fn get_sessions(offset: u32, limit: u32) -> Result<SessionsResponse, Strin
         default
     }
 
-    use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::Row;
+    use sqlx::sqlite::SqlitePoolOptions;
 
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
@@ -398,7 +593,7 @@ async fn get_sessions(offset: u32, limit: u32) -> Result<SessionsResponse, Strin
          FROM threads
          WHERE archived = 0 AND title != '' AND tokens_used > 0
          ORDER BY updated_at DESC
-         LIMIT ? OFFSET ?"
+         LIMIT ? OFFSET ?",
     )
     .bind(limit)
     .bind(offset)
@@ -408,22 +603,25 @@ async fn get_sessions(offset: u32, limit: u32) -> Result<SessionsResponse, Strin
 
     pool.close().await;
 
-    let sessions: Vec<SessionInfo> = rows.iter().map(|row| {
-        let id: String = row.get("id");
-        let name: String = row.get("title");
-        let model: String = row.get("model");
-        let tokens: u32 = row.get::<u32, _>("tokens_used");
-        let rollout_path: String = row.get("rollout_path");
-        let cw = model_cw(&model, default_cw);
-        SessionInfo {
-            id,
-            name,
-            model,
-            total: (cw + 9999) / 10000,
-            used: std::cmp::min((tokens + 9999) / 10000, (cw + 9999) / 10000),
-            rollout_path,
-        }
-    }).collect();
+    let sessions: Vec<SessionInfo> = rows
+        .iter()
+        .map(|row| {
+            let id: String = row.get("id");
+            let name: String = row.get("title");
+            let model: String = row.get("model");
+            let tokens: u32 = row.get::<u32, _>("tokens_used");
+            let rollout_path: String = row.get("rollout_path");
+            let cw = model_cw(&model, default_cw);
+            SessionInfo {
+                id,
+                name,
+                model,
+                total: cw.div_ceil(10000),
+                used: std::cmp::min(tokens.div_ceil(10000), cw.div_ceil(10000)),
+                rollout_path,
+            }
+        })
+        .collect();
 
     Ok(SessionsResponse { sessions, total })
 }
@@ -440,16 +638,28 @@ async fn get_session_content(id: String) -> Result<Vec<SessionMessage>, String> 
             let mut best: Option<std::path::PathBuf> = None;
             for entry in entries.flatten() {
                 let path = entry.path();
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if name.starts_with("state_") && name.ends_with(".sqlite") {
-                        match best {
-                            None => best = Some(path),
-                            Some(ref current) => {
-                                let n_cur = current.file_stem().and_then(|s| s.to_str()).unwrap_or("").trim_start_matches("state_").trim_end_matches(".sqlite").parse::<u32>().unwrap_or(0);
-                                let n_new = name.trim_start_matches("state_").trim_end_matches(".sqlite").parse::<u32>().unwrap_or(0);
-                                if n_new > n_cur {
-                                    best = Some(path);
-                                }
+                if let Some(name) = path.file_name().and_then(|n| n.to_str())
+                    && name.starts_with("state_")
+                    && name.ends_with(".sqlite")
+                {
+                    match best {
+                        None => best = Some(path),
+                        Some(ref current) => {
+                            let n_cur = current
+                                .file_stem()
+                                .and_then(|s| s.to_str())
+                                .unwrap_or("")
+                                .trim_start_matches("state_")
+                                .trim_end_matches(".sqlite")
+                                .parse::<u32>()
+                                .unwrap_or(0);
+                            let n_new = name
+                                .trim_start_matches("state_")
+                                .trim_end_matches(".sqlite")
+                                .parse::<u32>()
+                                .unwrap_or(0);
+                            if n_new > n_cur {
+                                best = Some(path);
                             }
                         }
                     }
@@ -459,10 +669,12 @@ async fn get_session_content(id: String) -> Result<Vec<SessionMessage>, String> 
         })
         .ok_or_else(|| "Cannot find state database".to_string())?;
 
-    if !db_path.exists() { return Ok(Vec::new()); }
+    if !db_path.exists() {
+        return Ok(Vec::new());
+    }
 
-    use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::Row;
+    use sqlx::sqlite::SqlitePoolOptions;
 
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
@@ -470,13 +682,11 @@ async fn get_session_content(id: String) -> Result<Vec<SessionMessage>, String> 
         .await
         .map_err(|e| format!("DB error: {}", e))?;
 
-    let row = sqlx::query(
-        "SELECT rollout_path FROM threads WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| format!("Query error: {}", e))?;
+    let row = sqlx::query("SELECT rollout_path FROM threads WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| format!("Query error: {}", e))?;
 
     pool.close().await;
 
@@ -490,24 +700,35 @@ async fn get_session_content(id: String) -> Result<Vec<SessionMessage>, String> 
         return Ok(Vec::new());
     }
 
-    let content = std::fs::read_to_string(path)
-        .map_err(|e| format!("Read error: {}", e))?;
+    let content = std::fs::read_to_string(path).map_err(|e| format!("Read error: {}", e))?;
 
     let mut messages = Vec::new();
     for line in content.lines() {
         let timestamp = serde_json::from_str::<serde_json::Value>(line)
             .ok()
-            .and_then(|v| v.get("timestamp").and_then(|t| t.as_str()).map(String::from))
+            .and_then(|v| {
+                v.get("timestamp")
+                    .and_then(|t| t.as_str())
+                    .map(String::from)
+            })
             .unwrap_or_default();
 
         // Truncate raw line to reasonable length
         let raw = if line.len() > 2000 {
-            format!("{}... [truncated {} bytes]", &line[..line.floor_char_boundary(2000)], line.len() - 2000)
+            format!(
+                "{}... [truncated {} bytes]",
+                &line[..line.floor_char_boundary(2000)],
+                line.len() - 2000
+            )
         } else {
             line.to_string()
         };
 
-        messages.push(SessionMessage { timestamp, text: String::new(), raw });
+        messages.push(SessionMessage {
+            timestamp,
+            text: String::new(),
+            raw,
+        });
     }
 
     // Take last 50 messages to avoid huge responses
@@ -517,7 +738,6 @@ async fn get_session_content(id: String) -> Result<Vec<SessionMessage>, String> 
 
     Ok(messages)
 }
-
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const TRAY_ID: &str = "evocode-tray";
@@ -555,7 +775,11 @@ fn handle_tray_menu_event(app: &AppHandle, event: MenuEvent) {
         }
         MENU_START | MENU_STOP => {
             show_main_window(app);
-            let action = if event.id().as_ref() == MENU_START { "start" } else { "stop" };
+            let action = if event.id().as_ref() == MENU_START {
+                "start"
+            } else {
+                "stop"
+            };
             let _ = app.emit("tray-bridge-action", action);
         }
         _ => {}
@@ -574,11 +798,11 @@ fn handle_tray_icon_event(app: &AppHandle, event: TrayIconEvent) {
 }
 
 fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
-    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-        if window.label() == MAIN_WINDOW_LABEL {
-            api.prevent_close();
-            let _ = window.hide();
-        }
+    if let tauri::WindowEvent::CloseRequested { api, .. } = event
+        && window.label() == MAIN_WINDOW_LABEL
+    {
+        api.prevent_close();
+        let _ = window.hide();
     }
 }
 
@@ -597,6 +821,7 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .manage(BridgeState::new(17761))
         .invoke_handler(tauri::generate_handler![
             start_bridge,
@@ -612,6 +837,8 @@ pub fn run() {
             check_update,
             get_sessions,
             get_session_content,
+            test_provider_connectivity,
+            open_config_dir,
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {
@@ -623,7 +850,7 @@ pub fn run() {
                 .tooltip("evocode")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| handle_tray_menu_event(app, event))
+                .on_menu_event(handle_tray_menu_event)
                 .on_tray_icon_event(|tray, event| {
                     let app = tray.app_handle();
                     handle_tray_icon_event(app, event);
@@ -634,4 +861,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

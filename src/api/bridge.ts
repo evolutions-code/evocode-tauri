@@ -16,6 +16,31 @@ export async function getBridgeUrl(): Promise<string> {
   return invoke<string>('get_bridge_url')
 }
 
+export interface ConnectivityResult {
+  ok: boolean
+  status: number
+  latency_ms: number
+  message: string
+}
+
+export async function testProviderConnectivity(
+  baseUrl: string,
+  apiKey: string,
+  wireApi: string,
+  apiKeyHeader?: string,
+): Promise<ConnectivityResult> {
+  return invoke<ConnectivityResult>('test_provider_connectivity', {
+    baseUrl,
+    apiKey,
+    wireApi,
+    apiKeyHeader,
+  })
+}
+
+export async function openConfigDir(): Promise<string> {
+  return invoke<string>('open_config_dir')
+}
+
 export async function readConfig(): Promise<string> {
   return invoke<string>('read_config')
 }
@@ -70,5 +95,4 @@ export async function getSessions(offset: number, limit: number): Promise<Sessio
 export async function getSessionContent(id: string): Promise<SessionMessage[]> {
   return invoke<SessionMessage[]>('get_session_content', { id })
 }
-
 
