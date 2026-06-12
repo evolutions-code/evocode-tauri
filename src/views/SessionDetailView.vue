@@ -18,7 +18,7 @@
       </div>
       <div class="meta-item">
         <span class="meta-label">{{ t("session.tokens") }}</span>
-        <span class="meta-value">{{ formatTokens(sessionInfo.used_tokens, sessionInfo.used) }} / {{ formatTokens(sessionInfo.total_tokens, sessionInfo.total) }}</span>
+        <span class="meta-value">{{ displayTokens(sessionInfo.used_tokens, sessionInfo.used) }} / {{ displayTokens(sessionInfo.total_tokens, sessionInfo.total) }}</span>
       </div>
     </section>
 
@@ -31,6 +31,7 @@ import { ref, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { LeftOutlined } from "@ant-design/icons-vue"
 import { useLocale } from "../composables/useLocale"
+import { formatTokens } from "../utils/format"
 import { getSessionContent, getSessions } from "../api/bridge"
 import type { SessionInfo } from "../api/bridge"
 
@@ -45,10 +46,10 @@ const sessionTitle = ref("")
 
 // Prefer the exact token count from the backend; fall back to
 // cells * 10K for older builds that don't yet emit the precise fields.
-function formatTokens(precise: number | undefined, cells: number | undefined): string {
-  if (precise != null) return precise.toLocaleString()
+function displayTokens(precise: number | undefined, cells: number | undefined): string {
+  if (precise != null) return formatTokens(precise)
   if (cells == null) return "0"
-  return (cells * 10000).toLocaleString()
+  return formatTokens(cells * 10000)
 }
 
 onMounted(async () => {

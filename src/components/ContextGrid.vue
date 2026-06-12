@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatTokens } from '../utils/format'
 
 export interface SessionData {
   id: string
@@ -59,16 +60,16 @@ const tokensUsed = computed(() => {
     // fall back to cell * 10K (older builds). Never round the displayed
     // value back up to the next 10K boundary by recomputing from cells.
     if (props.session.used_tokens != null) {
-      return props.session.used_tokens.toLocaleString()
+      return formatTokens(props.session.used_tokens)
     }
     if (props.session.total === 0) return '0'
-    return (props.session.used * 10000).toLocaleString()
+    return formatTokens(props.session.used * 10000)
   })
 const tokensTotal = computed(() => {
     if (props.session.total_tokens != null) {
-      return props.session.total_tokens.toLocaleString()
+      return formatTokens(props.session.total_tokens)
     }
-    return (props.session.total * 10000).toLocaleString()
+    return formatTokens(props.session.total * 10000)
   })
 
 // Auto-calculate columns for a visually balanced grid
