@@ -100,11 +100,7 @@
               <div class="tab-section-head">
                 <div class="tab-section-title">{{ t("config.limits.title") }}</div>
                 <div class="tab-section-sub muted-3">{{ t("config.limits.desc") }}</div>
-                <a-button size="small" :loading="testingConn" @click="testConnection(key)">
-                  <template #icon><ApiOutlined /></template>
-                  {{ t("config.form.test") }}
-                </a-button>
-              </div>
+                </div>
 
               <div class="slider-block">
                 <div class="slider-head">
@@ -161,7 +157,11 @@
 
     </div>
     <div class="actions-bar">
-      <a-button type="primary" size="large" shape="round" :loading="saving" @click="handleSave">
+      <a-button :loading="testingConn" :disabled="testingConn" @click="testConnection(editingId)">
+        <template #icon><ApiOutlined /></template>
+        {{ t("config.form.test") }}
+      </a-button>
+      <a-button type="primary" :loading="saving" :disabled="saving" @click="handleSave">
         <template #icon><SaveOutlined /></template>
         {{ t("config.save") }}
       </a-button>
@@ -241,6 +241,7 @@ const showRemoveModal = ref(false)
 const removeTarget = ref("")
 const wirePresetKey = reactive<Record<string, string>>({})
 const testingConn = ref(false)
+const saving = ref(false)
 const syncing = ref(false)
 const connResult = ref<null | { ok: boolean; status: number; latency_ms: number; message: string }>(null)
 
@@ -494,6 +495,18 @@ function buildConfig(): string {
   return blocks.join("\n").replace(/\n+$/, "\n")
 }
 
+async function handleSave() {
+  saving.value = true
+  try {
+    await writeConfig(buildConfig())
+    message.success("Config saved", 3)
+  } catch (e: any) {
+    message.error("Failed to save: " + (e?.message || String(e)), 4)
+  } finally {
+    saving.value = false
+  }
+}
+
 async function handleSyncToCodex(providerId: string) {
   if (!providerId || syncing.value) return
   syncing.value = true
@@ -569,8 +582,8 @@ onMounted(async () => {
 .tab-section-title { font-size: 14px; font-weight: 600; color: var(--text-1); }
 .tab-section-sub { font-size: 12px; margin-top: 1px; }
 .actions-bar {
-  position: sticky; bottom: 16px; z-index: 5;
-  display: flex; justify-content: flex-end;
+  margin-top: 14px; position: sticky; bottom: 16px; z-index: 5;
+  display: flex; justify-content: flex-end; gap: 10px;
   padding: 12px 16px; border-radius: var(--r-lg);
   background: var(--bg-glass); border: 1px solid var(--border);
   backdrop-filter: blur(14px) saturate(140%);
