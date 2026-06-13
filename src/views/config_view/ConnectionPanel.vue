@@ -105,7 +105,10 @@
               <div class="slider-block">
                 <div class="slider-head">
                   <div>
-                    <div class="slider-label">{{ t("config.limits.context_window") }}</div>
+                    <div class="slider-label">
+                      {{ t("config.limits.context_window") }}
+                      <a-tooltip :title="t('config.limits.context_window_tip')"><InfoCircleOutlined class="compact-tag" /></a-tooltip>
+                    </div>
                     <div class="slider-value">{{ contextLabel(item.modelContextWindow) }}</div>
                   </div>
                 </div>
