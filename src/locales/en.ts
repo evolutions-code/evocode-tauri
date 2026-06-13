@@ -51,13 +51,12 @@
   // Config
   "config.settings": "Settings",
   "config.title": "Configuration",
-  "config.desc": "Pick a provider preset, fill in credentials, save. You can store many providers and switch the active one anytime.",
-  "config.back": "Back to Dashboard",
   "config.providers": "Providers",
   "config.providers.desc": "Add as many as you like. The active one is what the bridge uses.",
   "config.providers.remove_title": "Remove this provider?",
   "config.providers.ok": "Yes",
   "config.providers.cancel": "No",
+  "config.providers.remove_confirm": "Remove {name}?",
   "config.providers.placeholder": "new provider id",
   "config.providers.add": "Add",
   "config.providers.active": "Active:",
@@ -115,6 +114,11 @@
   "config.limits.preset_1m": "Huge",
   "config.save": "Save Config",
   "config.sync": "Sync to Codex",
+  "config.sync.placeholder": "Sync to Codex...",
+  "config.sync.select": "Sync",
+  "config.sync.no_providers": "No options",
+  "config.sync.done": "Synced",
+  "config.sync.failed": "Sync failed",
 
   // Logs
   "logs.title": "Bridge Logs",
@@ -169,3 +173,4 @@
   "session.collapse": "Collapse All",
   "session.empty": "No readable content",
 }
+

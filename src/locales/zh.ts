@@ -51,13 +51,12 @@
   // Config
   "config.settings": "设置",
   "config.title": "配置",
-  "config.desc": "选择预设 Provider，填入凭证，保存即可。可存储多个 Provider，随时切换。",
-  "config.back": "返回仪表盘",
   "config.providers": "Providers",
   "config.providers.desc": "可添加任意数量的 Provider，激活的 Provider 供桥接服务使用。",
   "config.providers.remove_title": "移除此 Provider？",
   "config.providers.ok": "是",
   "config.providers.cancel": "否",
+  "config.providers.remove_confirm": "确定移除 {name}？",
   "config.providers.placeholder": "新 provider id",
   "config.providers.add": "添加",
   "config.providers.active": "当前激活：",
@@ -115,6 +114,11 @@
   "config.limits.preset_1m": "巨大",
   "config.save": "保存配置",
   "config.sync": "同步到 Codex",
+  "config.sync.placeholder": "同步到 Codex...",
+  "config.sync.select": "同步",
+  "config.sync.no_providers": "无选项",
+  "config.sync.done": "已同步",
+  "config.sync.failed": "同步失败",
 
   // Logs
   "logs.title": "桥接日志",
@@ -169,3 +173,4 @@
   "session.collapse": "收起全部",
   "session.empty": "暂无可读内容",
 }
+
