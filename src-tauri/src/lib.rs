@@ -323,10 +323,12 @@ async fn test_provider_connectivity(
             let message = if ok {
                 if (200..300).contains(&status) {
                     format!("Reachable (HTTP {})", status)
+                } else if status == 400 {
+                    format!("Bad request (HTTP {})", status)
                 } else if status == 401 || status == 403 {
-                    format!("Reachable, auth rejected (HTTP {})", status)
+                    format!("Auth rejected (HTTP {})", status)
                 } else if status == 404 || status == 405 {
-                    format!("Reachable, endpoint not found (HTTP {})", status)
+                    format!("Endpoint not found (HTTP {})", status)
                 } else {
                     format!("Reachable (HTTP {})", status)
                 }
