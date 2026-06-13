@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="connection-panel">
     <div class="glass panel">
       <div class="panel-head">
@@ -26,21 +26,148 @@
         v-if="providerIds.length"
         type="editable-card"
         hideAdd
-        v-model:activeKey="editingId"
+        :activeKey="editingId"
         @change="onTabChange"
         @edit="onTabEdit"
         class="prov-tabs"
         size="small"
+        destroyInactiveTabPane
       >
         <a-tab-pane
-          v-for="id in providerIds"
-          :key="id"
-          :tab="id"
-          :closable="providerIds.length > 1"
-        />
+          v-for="(item, key) in providers"
+          :key="key"
+          :tab="key"
+        >
+          <div class="tab-body">
+            <!-- Wire API -->
+            <div class="tab-section">
+              <div class="tab-section-head">
+                <div class="tab-section-title">{{ t("config.wire_api") }}</div>
+                <div class="tab-section-sub muted-3">{{ t("config.wire_api.desc") }}</div>
+              </div>
+              <a-segmented v-model:value="wirePresetKey[key]" :options="wireOptions" block @change="(val: string | number) => onWireApiChange(key, val)" />
+            </div>
+
+            <!-- Provider config form -->
+            <div class="tab-section">
+              <div class="tab-section-head">
+                <div class="tab-section-title">{{ t("config.form.title") }}</div>
+                <a-button size="small" @click="resetForm(key)">
+                  <template #icon><ReloadOutlined /></template> Reset
+                </a-button>
+              </div>
+              <a-alert v-if="connResult" class="conn-alert"
+                :type="connResult.ok ? 'success' : 'error'"
+                :message="connResult.message"
+                :description="t('config.form.test_latency') + ': ' + connResult.latency_ms + ' ms'"
+                show-icon closable @close="connResult = null" />
+              <a-form layout="vertical" class="form" :model="item">
+                <a-row :gutter="16">
+                  <a-col :span="12">
+                    <a-form-item :label="t('config.form.model')" required>
+                      <a-input v-model:value="item.model" :placeholder="t('config.form.model_placeholder')" />
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="12">
+                    <a-form-item :label="t('config.form.wire_api')">
+                      <a-tooltip :title="t('config.wire_api.tooltip')">
+                        <a-select v-model:value="item.wireApi" @change="(val: string) => onWireApiSelectChange(key, val)">
+                          <a-select-option value="anthropic"><span class="opt-row"><span class="dot purple" /> {{ t("config.wire.anthropic") }}</span></a-select-option>
+                          <a-select-option value="chat_completions"><span class="opt-row"><span class="dot blue" /> {{ t("config.wire.chat") }}</span></a-select-option>
+                          <a-select-option value="openai"><span class="opt-row"><span class="dot cyan" /> {{ t("config.wire.openai") }}</span></a-select-option>
+                        </a-select>
+                      </a-tooltip>
+                    </a-form-item>
+                  </a-col>
+                </a-row>
+                <a-form-item :label="t('config.form.base_url')" required>
+                  <a-input v-model:value="item.baseUrl" :placeholder="t('config.form.base_url_placeholder')" />
+                </a-form-item>
+                <a-row :gutter="16">
+                  <a-col :span="12">
+                    <a-form-item :label="t('config.form.api_key')">
+                      <a-input-password v-model:value="item.apiKey" :placeholder="t('config.form.api_key_placeholder')" />
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="12">
+                    <a-form-item :label="t('config.form.api_key_header')">
+                      <a-tooltip :title="t('config.form.api_key_header_tooltip')">
+                        <a-input v-model:value="item.apiKeyHeader" :placeholder="t('config.form.api_key_header_placeholder')" />
+                      </a-tooltip>
+                    </a-form-item>
+                  </a-col>
+                </a-row>
+              </a-form>
+            </div>
+
+            <!-- Limits: context window + auto compact -->
+            <div class="tab-section">
+              <div class="tab-section-head">
+                <div class="tab-section-title">{{ t("config.limits.title") }}</div>
+                <div class="tab-section-sub muted-3">{{ t("config.limits.desc") }}</div>
+                <a-button size="small" :loading="testingConn" @click="testConnection(key)">
+                  <template #icon><ApiOutlined /></template>
+                  {{ t("config.form.test") }}
+                </a-button>
+              </div>
+
+              <div class="slider-block">
+                <div class="slider-head">
+                  <div>
+                    <div class="slider-label">{{ t("config.limits.context_window") }}</div>
+                    <div class="slider-value">{{ contextLabel(item.modelContextWindow) }}</div>
+                  </div>
+                </div>
+                <div :ref="(el: any) => ctxRailRef(key, el)" class="slider-rail"
+                  @mousedown="(e: any) => startDrag(e, 'context', key)"
+                  @touchstart.prevent="(e: any) => startDrag(e, 'context', key)">
+                  <div class="slider-fill" :style="{ width: ctxPercent(key) + '%' }" />
+                  <div class="slider-thumb" :style="{ left: ctxPercent(key) + '%' }"><span class="thumb-tip">{{ contextLabel(item.modelContextWindow) }}</span></div>
+                  <div v-for="(_, i) in LIMIT_PRESETS" :key="i" class="slider-tick" :style="{ left: tickLeft(i) + '%' }" />
+                </div>
+                <div class="slider-stops">
+                  <div v-for="p in LIMIT_PRESETS" :key="p.key" class="slider-stop"
+                    :class="{ active: item.modelContextWindow === p.context }"
+                    @click="applyLimitPreset(key, p.key)">
+                    <div class="stop-dot" :style="{ color: p.key === 'compact' ? '#34d399' : '#4d7dff' }" />
+                    <div class="stop-name">{{ t(p.labelKey) }}</div>
+                    <div class="stop-label">{{ contextLabel(p.context) }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <a-divider style="margin: 8px 0;" />
+
+              <div class="slider-block">
+                <div class="slider-head">
+                  <div>
+                    <div class="slider-label">
+                      {{ t("config.limits.auto_compact") }}
+                      <a-tooltip :title="t('config.limits.auto_compact_tip')"><InfoCircleOutlined class="compact-tag" /></a-tooltip>
+                    </div>
+                    <div class="slider-value">{{ contextLabel(autoCompactTokens(key)) }}</div>
+                  </div>
+                  <div class="slider-label" style="margin-bottom: 2px;">{{ autoCompactRatio(key) }}%</div>
+                </div>
+                <div :ref="(el: any) => ratioRailRef(key, el)" class="slider-rail"
+                  @mousedown="(e: any) => startDrag(e, 'ratio', key)"
+                  @touchstart.prevent="(e: any) => startDrag(e, 'ratio', key)">
+                  <div class="slider-fill compact" :style="{ width: autoCompactRatio(key) + '%' }" />
+                  <div class="slider-thumb" :style="{ left: autoCompactRatio(key) + '%' }">
+                    <span class="thumb-tip">{{ autoCompactRatio(key) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-tab-pane>
       </a-tabs>
       <div v-else class="empty-tabs-hint">{{ t("config.sync.no_providers") }}</div>
 
+      <a-button type="dashed" class="add-btn-row" @click="showAddModal = true">
+        <template #icon><PlusOutlined /></template>
+        {{ t("config.providers.add") }}
+      </a-button>
 
     </div>
 
@@ -67,140 +194,11 @@
     >
       <p>{{ removeTarget ? t("config.providers.remove_confirm", { name: removeTarget }) : "" }}</p>
     </a-modal>
-    <div class="glass panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">{{ t("config.wire_api") }}</div>
-          <div class="panel-sub muted-3">{{ t("config.wire_api.desc") }}</div>
-        </div>
-      </div>
-      <a-segmented v-model:value="activePresetKey" :options="wireOptions" block @change="onWireApiChange" />
-    </div>
-
-    <div class="glass panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">{{ t("config.form.title") }}</div>
-          <div class="panel-sub muted-3">{{ t("config.form.desc") }} <code class="mono">[providers.{{ activeId || "..." }}]</code>.</div>
-        </div>
-        <div class="head-actions">
-          <a-button size="small" :disabled="!editingId" @click="resetForm">
-            <template #icon><ReloadOutlined /></template> Reset
-          </a-button>
-        </div>
-      </div>
-      <a-alert v-if="connResult" class="conn-alert"
-        :type="connResult.ok ? 'success' : 'error'"
-        :message="connResult.message"
-        :description="t('config.form.test_latency') + ': ' + connResult.latency_ms + ' ms'"
-        show-icon closable @close="connResult = null" />
-      <a-empty v-if="!editingId" :description="t('config.form.empty')" class="empty-block" />
-      <a-form v-else layout="vertical" class="form" :model="formState">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item :label="t('config.form.model')" required>
-              <a-input v-model:value="formState.model" :placeholder="t('config.form.model_placeholder')" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item :label="t('config.form.wire_api')">
-              <a-tooltip :title="t('config.wire_api.tooltip')">
-                <a-select v-model:value="formState.wireApi" @change="onWireApiSelectChange">
-                  <a-select-option value="anthropic"><span class="opt-row"><span class="dot purple" /> {{ t("config.wire.anthropic") }}</span></a-select-option>
-                  <a-select-option value="chat_completions"><span class="opt-row"><span class="dot blue" /> {{ t("config.wire.chat") }}</span></a-select-option>
-                  <a-select-option value="openai"><span class="opt-row"><span class="dot cyan" /> {{ t("config.wire.openai") }}</span></a-select-option>
-                </a-select>
-              </a-tooltip>
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-form-item :label="t('config.form.base_url')" required>
-          <a-input v-model:value="formState.baseUrl" :placeholder="t('config.form.base_url_placeholder')" />
-        </a-form-item>
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item :label="t('config.form.api_key')">
-              <a-input-password v-model:value="formState.apiKey" :placeholder="t('config.form.api_key_placeholder')" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item :label="t('config.form.api_key_header')">
-              <a-tooltip :title="t('config.form.api_key_header_tooltip')">
-                <a-input v-model:value="formState.apiKeyHeader" :placeholder="t('config.form.api_key_header_placeholder')" />
-              </a-tooltip>
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-form>
-    </div>
-
-    <div v-if="editingId" class="glass panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">{{ t("config.limits.title") }}</div>
-          <div class="panel-sub muted-3">{{ t("config.limits.desc") }}</div>
-        </div>
-        <a-button size="small" :loading="testingConn" @click="testConnection">
-          <template #icon><ApiOutlined /></template>
-          {{ t("config.form.test") }}
-        </a-button>
-      </div>
-
-      <div class="slider-block">
-        <div class="slider-head">
-          <div>
-            <div class="slider-label">{{ t("config.limits.context_window") }}</div>
-            <div class="slider-value">{{ contextLabel(ctxValue) }}</div>
-          </div>
-        </div>
-        <div ref="ctxRail" class="slider-rail"
-          @mousedown="(e: any) => startDrag(e, 'context')"
-          @touchstart.prevent="(e: any) => startDrag(e, 'context')">
-          <div class="slider-fill" :style="{ width: ctxPercent + '%' }" />
-          <div class="slider-thumb" :style="{ left: ctxPercent + '%' }"><span class="thumb-tip">{{ contextLabel(ctxValue) }}</span></div>
-          <div v-for="(_, i) in LIMIT_PRESETS" :key="i" class="slider-tick" :style="{ left: tickLeft(i) + '%' }" />
-        </div>
-        <div class="slider-stops">
-          <div v-for="p in LIMIT_PRESETS" :key="p.key" class="slider-stop"
-            :class="{ active: ctxValue === p.context }"
-            @click="applyLimitPreset(p.key)">
-            <div class="stop-dot" :style="{ color: p.key === 'compact' ? '#34d399' : '#4d7dff' }" />
-            <div class="stop-name">{{ t(p.labelKey) }}</div>
-            <div class="stop-label">{{ contextLabel(p.context) }}</div>
-          </div>
-        </div>
-      </div>
-
-      <a-divider style="margin: 8px 0;" />
-
-      <div class="slider-block">
-        <div class="slider-head">
-          <div>
-            <div class="slider-label">
-              {{ t("config.limits.auto_compact") }}
-              <a-tooltip :title="t('config.limits.auto_compact_tip')"><InfoCircleOutlined class="compact-tag" /></a-tooltip>
-            </div>
-            <div class="slider-value">{{ contextLabel(compactTokens) }}</div>
-          </div>
-          <div class="slider-label" style="margin-bottom: 2px;">{{ compactRatio }}%</div>
-        </div>
-        <div ref="ratioRail" class="slider-rail"
-          @mousedown="(e: any) => startDrag(e, 'ratio')"
-          @touchstart.prevent="(e: any) => startDrag(e, 'ratio')">
-          <div class="slider-fill compact" :style="{ width: compactRatio + '%' }" />
-          <div class="slider-thumb" :style="{ left: compactRatio + '%' }">
-            <span class="thumb-tip">{{ compactRatio }}%</span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
-
-
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from "vue"
+import { ref, reactive, onMounted, onUnmounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
 import { writeConfig, syncToCodex, readConfig } from "../../api/bridge"
 import { message } from "ant-design-vue"
@@ -210,7 +208,6 @@ import { testProviderConnectivity } from "../../api/bridge"
 const { t } = useLocale()
 
 interface Provider {
-  providerId: string
   wireApi: string
   baseUrl: string
   model: string
@@ -248,26 +245,27 @@ const newProviderName = ref("")
 const showAddModal = ref(false)
 const showRemoveModal = ref(false)
 const removeTarget = ref("")
-const activePresetKey = ref("anthropic")
+const wirePresetKey = reactive<Record<string, string>>({})
 const testingConn = ref(false)
 const syncing = ref(false)
 const connResult = ref<null | { ok: boolean; status: number; latency_ms: number; message: string }>(null)
 
-const formState = reactive<Provider>({
-  providerId: "", wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key",
-  modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT,
-})
+// Per-provider slider rail refs
+const ctxRails = reactive<Record<string, HTMLElement | null>>({})
+const ratioRails = reactive<Record<string, HTMLElement | null>>({})
 
-const ctxValue = computed(() => formState.modelContextWindow || DEFAULT_CONTEXT_WINDOW)
-const compactRatio = computed(() => {
-  if (!formState.modelContextWindow) return 0
-  return Math.round((formState.modelAutoCompactLimit / formState.modelContextWindow) * 1000) / 10
-})
-const compactTokens = computed(() => Math.round(ctxValue.value * compactRatio.value / 100))
-const ctxPercent = computed(() => {
-  const v = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, ctxValue.value))
-  return Math.round(((v - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100)
-})
+function ctxRailRef(id: string, el: any) { ctxRails[id] = el }
+function ratioRailRef(id: string, el: any) { ratioRails[id] = el }
+
+// Drag state
+let dragging: { id: string; type: "context" | "ratio" } | null = null
+let onMove: ((e: MouseEvent | TouchEvent) => void) | null = null
+let onUp: (() => void) | null = null
+
+function tickLeft(i: number) {
+  const p = LIMIT_PRESETS[i]
+  return Math.round(((p.context - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100)
+}
 
 function contextLabel(n: number) {
   if (!n) return "0"
@@ -276,90 +274,146 @@ function contextLabel(n: number) {
   return String(n)
 }
 
-function tickLeft(i: number) {
-  const p = LIMIT_PRESETS[i]
-  const v = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, p.context))
-  return Math.round(((v - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100)
-}
-
-const ctxRail = ref<HTMLElement | null>(null)
-const ratioRail = ref<HTMLElement | null>(null)
-let dragging: "context" | "ratio" | null = null
-let onMove: ((e: MouseEvent | TouchEvent) => void) | null = null
-let onUp: (() => void) | null = null
-
 function railPercent(rail: HTMLElement, clientX: number): number {
   const rect = rail.getBoundingClientRect()
   return Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100))
 }
 
-function applyDrag(target: "context" | "ratio", clientX: number) {
-  if (target === "context") {
-    const rail = ctxRail.value; if (!rail) return
+function ctxPercent(id: string) {
+  const p = providers[id]
+  if (!p) return 0
+  const v = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, p.modelContextWindow))
+  return Math.round(((v - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100)
+}
+
+function autoCompactRatio(id: string) {
+  const p = providers[id]
+  if (!p || !p.modelContextWindow) return 0
+  return Math.round((p.modelAutoCompactLimit / p.modelContextWindow) * 1000) / 10
+}
+
+function autoCompactTokens(id: string) {
+  const p = providers[id]
+  if (!p) return 0
+  return Math.round(p.modelContextWindow * autoCompactRatio(id) / 100)
+}
+
+function applyDrag(id: string, type: "context" | "ratio", clientX: number) {
+  const p = providers[id]
+  if (!p) return
+  if (type === "context") {
+    const rail = ctxRails[id]; if (!rail) return
     const pct = railPercent(rail, clientX)
     let snapped: number | null = null
-    for (const p of LIMIT_PRESETS) {
-      if (Math.abs(((p.context - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100 - pct) < 6) { snapped = p.context; break }
+    for (const preset of LIMIT_PRESETS) {
+      if (Math.abs(((preset.context - CONTEXT_MIN) / (CONTEXT_MAX - CONTEXT_MIN)) * 100 - pct) < 6) { snapped = preset.context; break }
     }
-    if (snapped == null) setContextWindow(CONTEXT_MIN + (CONTEXT_MAX - CONTEXT_MIN) * (pct / 100))
-    else setContextWindow(snapped)
+    if (snapped == null) setContextWindow(id, CONTEXT_MIN + (CONTEXT_MAX - CONTEXT_MIN) * (pct / 100))
+    else setContextWindow(id, snapped)
   } else {
-    const rail = ratioRail.value; if (!rail) return
-    setCompactRatio(railPercent(rail, clientX))
+    const rail = ratioRails[id]; if (!rail) return
+    setCompactRatio(id, railPercent(rail, clientX))
   }
 }
 
-function setContextWindow(value: number) {
-  const next = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, Math.round(value)))
-  formState.modelContextWindow = next
-  formState.modelAutoCompactLimit = Math.round(next * 0.8)
+function setContextWindow(id: string, value: number) {
+  const p = providers[id]
+  if (!p) return
+  p.modelContextWindow = Math.min(CONTEXT_MAX, Math.max(CONTEXT_MIN, Math.round(value)))
+  p.modelAutoCompactLimit = Math.round(p.modelContextWindow * 0.8)
 }
 
-function setCompactRatio(percent: number) {
-  formState.modelAutoCompactLimit = Math.round(formState.modelContextWindow * Math.min(100, Math.max(0, percent)) / 100)
+function setCompactRatio(id: string, percent: number) {
+  const p = providers[id]
+  if (!p) return
+  p.modelAutoCompactLimit = Math.round(p.modelContextWindow * Math.min(100, Math.max(0, percent)) / 100)
 }
 
-function startDrag(e: MouseEvent | TouchEvent, target: "context" | "ratio") {
+function startDrag(e: MouseEvent | TouchEvent, type: "context" | "ratio", id: string) {
   const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX
-  applyDrag(target, clientX)
-  dragging = target
+  applyDrag(id, type, clientX)
+  dragging = { id, type }
   onMove = (ev: MouseEvent | TouchEvent) => {
     if (!dragging) return
-    applyDrag(dragging, "touches" in ev ? ev.touches[0].clientX : (ev as MouseEvent).clientX)
+    applyDrag(dragging.id, dragging.type, "touches" in ev ? ev.touches[0].clientX : (ev as MouseEvent).clientX)
   }
-  onUp = () => { dragging = null; if (onMove) { window.removeEventListener("mousemove", onMove as any); window.removeEventListener("touchmove", onMove as any) } if (onUp) { window.removeEventListener("mouseup", onUp); window.removeEventListener("touchend", onUp) } onMove = null; onUp = null }
-  window.addEventListener("mousemove", onMove as any); window.addEventListener("touchmove", onMove as any, { passive: true } as any)
-  window.addEventListener("mouseup", onUp); window.addEventListener("touchend", onUp)
+  onUp = () => {
+    dragging = null
+    if (onMove) { window.removeEventListener("mousemove", onMove as any); window.removeEventListener("touchmove", onMove as any) }
+    if (onUp) { window.removeEventListener("mouseup", onUp); window.removeEventListener("touchend", onUp) }
+    onMove = null; onUp = null
+  }
+  window.addEventListener("mousemove", onMove as any)
+  window.addEventListener("touchmove", onMove as any, { passive: true } as any)
+  window.addEventListener("mouseup", onUp)
+  window.addEventListener("touchend", onUp)
 }
-onUnmounted(() => { dragging = null; if (onMove) { window.removeEventListener("mousemove", onMove as any); window.removeEventListener("touchmove", onMove as any) } if (onUp) { window.removeEventListener("mouseup", onUp); window.removeEventListener("touchend", onUp) } })
 
-function applyLimitPreset(key: string) {
-  const p = LIMIT_PRESETS.find((x) => x.key === key)
+onUnmounted(() => {
+  dragging = null
+  if (onMove) { window.removeEventListener("mousemove", onMove as any); window.removeEventListener("touchmove", onMove as any) }
+  if (onUp) { window.removeEventListener("mouseup", onUp); window.removeEventListener("touchend", onUp) }
+})
+
+function applyLimitPreset(id: string, key: string) {
+  const p = providers[id]
   if (!p) return
-  formState.modelContextWindow = p.context; formState.modelAutoCompactLimit = p.compact
+  const preset = LIMIT_PRESETS.find((x) => x.key === key)
+  if (!preset) return
+  p.modelContextWindow = preset.context
+  p.modelAutoCompactLimit = preset.compact
 }
 
-function snapshotEditing() {
-  if (!editingId.value) return
-  providers[editingId.value] = { ...formState, providerId: editingId.value }
+function onWireApiChange(id: string, key: string | number) {
+  const p = providers[id]
+  if (!p) return
+  const preset = PRESETS.find((pr) => pr.key === key)
+  if (!preset) return
+  p.wireApi = preset.values.wireApi
+  p.apiKeyHeader = preset.values.apiKeyHeader
 }
 
-function loadForm(id: string) {
-  if (!id || !providers[id]) {
-    Object.assign(formState, { providerId: "", wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT })
-    return
+function onWireApiSelectChange(id: string, value: string) {
+  const p = providers[id]
+  if (!p) return
+  p.wireApi = value
+  const m = PRESETS.find((pr) => pr.values.wireApi === value)
+  if (m) {
+    wirePresetKey[id] = m.key
+    p.apiKeyHeader = m.values.apiKeyHeader
   }
-  Object.assign(formState, providers[id])
-  const m = PRESETS.find((p) => p.values.wireApi === formState.wireApi)
-  if (m) activePresetKey.value = m.key
 }
 
-function setEditing(id: string) {
-  snapshotEditing(); editingId.value = id; loadForm(id)
+async function testConnection(id: string) {
+  const p = providers[id]
+  if (!p || !p.baseUrl) { message.warning(t("config.form.test_need_url")); return }
+  testingConn.value = true; connResult.value = null
+  try {
+    const r = await testProviderConnectivity(p.baseUrl, p.apiKey || "", p.wireApi || "anthropic", p.apiKeyHeader || undefined)
+    connResult.value = r
+  } catch (e: any) {
+    connResult.value = { ok: false, status: 0, latency_ms: 0, message: t("config.form.test_error") + ": " + (e?.message || String(e)) }
+  } finally {
+    testingConn.value = false
+  }
+}
+
+function resetForm(id: string) {
+  const p = providers[id]
+  if (!p) return
+  p.model = ""
+  p.baseUrl = ""
+  p.apiKey = ""
+  p.wireApi = "anthropic"
+  p.apiKeyHeader = "X-Api-Key"
+  p.modelContextWindow = DEFAULT_CONTEXT_WINDOW
+  p.modelAutoCompactLimit = DEFAULT_COMPACT_LIMIT
+  const m = PRESETS.find((x) => x.values.wireApi === p.wireApi)
+  if (m) wirePresetKey[id] = m.key
 }
 
 function onTabChange(key: string) {
-  setEditing(key)
+  editingId.value = key
 }
 
 function onTabEdit(targetKey: string | MouseEvent, action: string) {
@@ -373,10 +427,18 @@ function doAddProvider() {
   const name = newProviderName.value.trim()
   if (!name) return
   if (!providerIds.value.includes(name)) providerIds.value.push(name)
-  if (!providers[name]) providers[name] = { providerId: name, wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT }
+  if (!providers[name]) {
+    providers[name] = {
+      wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key",
+      modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT,
+    }
+  }
+  if (!wirePresetKey[name]) wirePresetKey[name] = "anthropic"
   newProviderName.value = ""
   showAddModal.value = false
-  setEditing(name)
+  editingId.value = name
+  const m = PRESETS.find((x) => x.values.wireApi === providers[name].wireApi)
+  if (m) wirePresetKey[name] = m.key
 }
 
 function doRemoveProvider() {
@@ -385,47 +447,21 @@ function doRemoveProvider() {
   const idx = providerIds.value.indexOf(id)
   if (idx > -1) providerIds.value.splice(idx, 1)
   delete providers[id]
+  delete ctxRails[id]
+  delete ratioRails[id]
+  delete wirePresetKey[id]
   showRemoveModal.value = false
   removeTarget.value = ""
   if (editingId.value === id) {
     editingId.value = providerIds.value[0] || ""
-    loadForm(editingId.value)
   }
 }
 
-function resetForm() {
-  Object.assign(formState, { model: "", baseUrl: "", apiKey: "", wireApi: "anthropic", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT })
-  if (editingId.value) providers[editingId.value] = { ...formState, providerId: editingId.value }
-  const m = PRESETS.find((p) => p.values.wireApi === formState.wireApi)
-  if (m) activePresetKey.value = m.key
-}
-
-function onWireApiChange(key: string | number) {
-  const preset = PRESETS.find((p) => p.key === key)
-  if (!preset) return
-  formState.wireApi = preset.values.wireApi; formState.apiKeyHeader = preset.values.apiKeyHeader
-  snapshotEditing()
-}
-
-function onWireApiSelectChange(value: string) {
-  formState.wireApi = value
-  const m = PRESETS.find((p) => p.values.wireApi === value)
-  if (m) { activePresetKey.value = m.key; formState.apiKeyHeader = m.values.apiKeyHeader }
-}
-
-async function testConnection() {
-  if (!formState.baseUrl) { message.warning(t("config.form.test_need_url")); return }
-  testingConn.value = true; connResult.value = null
-  try {
-    const r = await testProviderConnectivity(formState.baseUrl, formState.apiKey || "", formState.wireApi || "anthropic", formState.apiKeyHeader || undefined)
-    connResult.value = r
-  } catch (e: any) { connResult.value = { ok: false, status: 0, latency_ms: 0, message: t("config.form.test_error") + ": " + (e?.message || String(e)) } }
-  finally { testingConn.value = false }
-}
-
+// parse / build / sync
 function parseConfig(text: string) {
   providerIds.value = []
   for (const k of Object.keys(providers)) delete providers[k]
+  for (const k of Object.keys(wirePresetKey)) delete wirePresetKey[k]
   if (!text) { activeId.value = ""; editingId.value = ""; return }
 
   const lines = text.split("\n")
@@ -438,7 +474,7 @@ function parseConfig(text: string) {
     else if (t.startsWith("[providers.")) {
       cur = t.replace("[providers.", "").replace("]", ""); inProv = true
       if (!providerIds.value.includes(cur)) providerIds.value.push(cur)
-      if (!providers[cur]) providers[cur] = { providerId: cur, wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT }
+      if (!providers[cur]) providers[cur] = { wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT }
     } else if (t.startsWith("[")) { inProv = false }
     else if (inProv) {
       const p = providers[cur]; if (!p) continue
@@ -452,16 +488,22 @@ function parseConfig(text: string) {
     }
   }
 
+  for (const id of providerIds.value) {
+    if (!wirePresetKey[id]) {
+      const m = PRESETS.find((pr) => pr.values.wireApi === (providers[id]?.wireApi || "anthropic"))
+      wirePresetKey[id] = m ? m.key : "anthropic"
+    }
+  }
+
   activeId.value = activeFromTop && providers[activeFromTop] ? activeFromTop : (providerIds.value[0] || "")
-  editingId.value = activeId.value; loadForm(editingId.value)
+  editingId.value = activeId.value
 }
 
 function buildConfig(): string {
-  snapshotEditing()
   const active = activeId.value
   const blocks: string[] = ["# evocode bridge config", "# Read by evocode-cli, not by upstream Codex directly.", "", "provider = \"" + active + "\"", ""]
   for (const id of providerIds.value) {
-    const p = providers[id] || { providerId: id, wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT }
+    const p = providers[id] || { wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT }
     blocks.push("[providers." + id + "]", "wire_api = \"" + p.wireApi + "\"", "base_url = \"" + p.baseUrl + "\"", "model = \"" + p.model + "\"", "api_key = \"" + p.apiKey + "\"", "api_key_header = \"" + p.apiKeyHeader + "\"", "model_context_window = " + (p.modelContextWindow || DEFAULT_CONTEXT_WINDOW), "model_auto_compact_token_limit = " + (p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT), "")
   }
   return blocks.join("\n").replace(/\n+$/, "\n")
@@ -505,7 +547,7 @@ onMounted(async () => {
 .empty-block { padding: 24px 0; }
 .conn-alert { margin-bottom: 16px; }
 .empty-tabs-hint { padding: 16px 0; color: var(--text-3); font-size: 13px; text-align: center; }
-.add-btn-row { display: flex; gap: 8px; }
+.add-btn-row { display: flex; gap: 8px; margin-top: 8px; }
 .prov-tabs { margin-top: 4px; }
 .prov-tabs :deep(.ant-tabs-nav) { margin-bottom: 0; }
 .prov-tabs :deep(.ant-tabs-tab) { font-size: 13px; padding: 4px 12px; }
@@ -536,7 +578,9 @@ onMounted(async () => {
 .stop-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
 .stop-name { font-size: 12px; }
 .stop-label { font-size: 13px; font-weight: 700; color: var(--text-1); }
+.tab-body { padding: 18px 0 4px; display: flex; flex-direction: column; gap: 18px; }
+.tab-section { display: flex; flex-direction: column; gap: 10px; }
+.tab-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tab-section-title { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.tab-section-sub { font-size: 12px; margin-top: 1px; }
 </style>
-
-
-
