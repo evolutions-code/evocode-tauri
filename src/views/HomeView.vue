@@ -12,14 +12,18 @@
 
 
 
-    <section v-if="sessions.length > 0" class="sessions-section">
+    <section class="sessions-section">
       <div class="sessions-header">
         <span class="bar" />
         <span class="title">{{ t("session.title") }}</span>
-        <span class="count">{{ sessionsTotal }} total</span>
-        <div class="search-box">
+        <span class="count" v-if="sessionsTotal > 0">{{ sessionsTotal }} total</span>
+        <div class="search-box" v-if="sessions.length > 0">
           <input v-model="searchQuery" type="text" class="search-input" placeholder="搜索会话..." />
         </div>
+        <a-button size="small" class="import-btn" @click="showImport = true">
+          <template #icon><DownloadOutlined /></template>
+          导入
+        </a-button>
       </div>
       <div class="sessions-grid">
         <div
@@ -49,6 +53,12 @@
         </a-button>
       </div>
     </section>
+
+    <ImportSessionsDialog
+      :open="showImport"
+      @close="showImport = false"
+      @imported="fetchSessions"
+    />
   </div>
 </template>
 
@@ -59,9 +69,10 @@ import { useRouter } from "vue-router"
 
 import { startBridge, stopBridge, getBridgeStatus, readConfig, getAppVersion, getSessions } from "../api/bridge"
 import type { SessionInfo } from "../api/bridge"
-import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue"
+import { LeftOutlined, RightOutlined, DownloadOutlined } from "@ant-design/icons-vue"
 import ContextGrid from "../components/ContextGrid.vue"
 import BridgeStatus from "../components/BridgeStatus.vue"
+import ImportSessionsDialog from "../components/ImportSessionsDialog.vue"
 
 const router = useRouter()
 const bridgeStatus = ref("stopped")
@@ -74,6 +85,7 @@ const currentPage = ref(0)
 const pageSize = 8
 const { t } = useLocale()
 const searchQuery = ref("")
+const showImport = ref(false)
 
 async function updateStatus() {
   bridgeStatus.value = await getBridgeStatus()
