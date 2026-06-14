@@ -97,10 +97,13 @@ async function pollStatus() {
     const s = await getBridgeStatus()
     status.value = s === "running" ? "running" : "stopped"
     if (s === "running") {
+      const el = bodyRef.value
+      const wasAtBottom = el && (el.scrollHeight - el.scrollTop - el.clientHeight) < 50
+
       logLines.value = await getBridgeLogs()
-      if (autoScroll.value) {
+
+      if (autoScroll.value && wasAtBottom) {
         await nextTick()
-        const el = bodyRef.value
         if (el) el.scrollTop = el.scrollHeight
       }
     }
@@ -134,7 +137,7 @@ onUnmounted(stopPolling)
 </script>
 
 <style scoped>
-.log-card { padding: 0; overflow: hidden; }
+.log-card { padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
 
 .log-head {
   display: flex;
@@ -156,7 +159,7 @@ onUnmounted(stopPolling)
 .icon-btn:hover { color: var(--text-1); background: var(--bg-elev-3); }
 
 .log-body {
-  height: 180px;
+  flex: 1;
   overflow-y: auto;
   font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
   font-size: 12.5px;

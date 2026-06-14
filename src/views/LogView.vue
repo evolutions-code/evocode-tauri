@@ -6,7 +6,7 @@
         <span>{{ t("logs.title") }}</span>
       </div>
     </section>
-    <section>
+    <section class="log-section">
       <LogPanel :bridge-running="bridgeStatus === 'running'" />
     </section>
   </div>
@@ -33,6 +33,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  flex: 1;
+  min-height: 0;
+}
+.log-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .page-header {
   display: flex;
