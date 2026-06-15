@@ -1,8 +1,6 @@
 mod connectivity;
 mod traits;
 mod fetchers;
-mod importers;
-mod presets;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -16,7 +14,6 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Mutex as AsyncMutex;
 
-/// Shared type alias used by importers that need an open SQLite pool.
 pub type DbPool = sqlx::SqlitePool;
 
 pub struct BridgeState {
@@ -1371,7 +1368,6 @@ fn collect_patch_diffs(changes: Option<&serde_json::Value>) -> Vec<PatchFileDiff
     out
 }
 
-// ===================== New Commands =====================
 
 #[tauri::command]
 async fn fetch_models(
@@ -1387,50 +1383,11 @@ async fn fetch_models(
     Ok(models.into_iter().map(|m| m.id).collect())
 }
 
-fn make_session_importer_registry() -> Vec<Box<dyn traits::SessionImporter>> {
-    vec![
-        Box::new(importers::opencode::OpenCodeImporter),
-        Box::new(importers::claude_code::ClaudeCodeImporter),
-    ]
-}
 
-#[tauri::command]
-async fn list_import_sources() -> Vec<&'static str> {
-    make_session_importer_registry()
-        .iter()
-        .map(|i| i.source_name())
-        .collect()
-}
 
-#[tauri::command]
-async fn list_importable_sessions(source: String) -> Result<Vec<traits::ImportableSession>, String> {
-    for importer in make_session_importer_registry() {
-        if importer.source_name() == source {
-            return importer.list_sessions().await;
-        }
-    }
-    Err(format!("Unknown import source: {}", source))
-}
 
-#[tauri::command]
-async fn import_sessions(
-    source: String,
-    session_ids: Vec<String>,
-) -> Result<traits::ImportResult, String> {
-    for importer in make_session_importer_registry() {
-        if importer.source_name() == source {
-            return importer.import_sessions(&session_ids).await;
-        }
-    }
-    Err(format!("Unknown import source: {}", source))
-}
 
-#[tauri::command]
-async fn get_provider_presets() -> Vec<traits::ProviderConfig> {
-    traits::all_presets().into_iter().map(|p| p.build_config()).collect()
-}
 
-// =========================================================
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const TRAY_ID: &str = "evocode-tray";
@@ -1533,10 +1490,6 @@ pub fn run() {
             test_provider_connectivity,
             open_config_dir,
             fetch_models,
-            list_import_sources,
-            list_importable_sessions,
-            import_sessions,
-            get_provider_presets,
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {

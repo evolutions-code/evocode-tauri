@@ -73,22 +73,11 @@
                           show-search
                           allow-clear
                           style="flex:1"
-                          :placeholder="t('config.form.model_placeholder')"
-                          :filter-option="(input: string, option: Record<string, any>) => option.value?.toString().toLowerCase().includes(input.toLowerCase())"
-                        >
-                          <template v-for="group in MODEL_PRESETS" :key="group.label">
-                            <a-select-opt-group :label="group.label">
-                              <a-select-option v-for="opt in group.options" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                              </a-select-option>
-                            </a-select-opt-group>
-                          </template>
-                          <a-select-opt-group v-if="fetchedModels[key]?.length" label="From API">
-                            <a-select-option v-for="m in fetchedModels[key]" :key="m" :value="m">
-                              {{ m }}
-                            </a-select-option>
-                          </a-select-opt-group>
-                        </a-select>
+                          :options="modelOptions[key]"
+                          :placeholder="t('config.form.model_select_placeholder')"
+                          @search="(val: string) => handleModelSearch(key, val)"
+                          :filter-option="(input: string, option: any) => option.value?.toString().toLowerCase().includes(input.toLowerCase())"
+                        />
                         <a-tooltip :title="t('config.form.fetch_models')">
                           <a-button size="small" :loading="fetchingModels[key]" @click="doFetchModels(key)">
                             <template #icon><ReloadOutlined /></template>
@@ -190,19 +179,9 @@
           </div>
         </a-tab-pane>
       </a-tabs>
-      <div v-else class="quick-add-section">
-        <div class="quick-add-card" v-for="p in presets" :key="p.id">
-          <div class="quick-add-icon">⚡</div>
-          <div class="quick-add-content">
-            <div class="quick-add-title">{{ p.title }}</div>
-            <div class="quick-add-desc">{{ p.description }}</div>
-            <a-button size="small" type="primary" @click="addPreset(p)">{{ t("config.quick_add.add") }}</a-button>
-          </div>
-        </div>
-        <div class="empty-tabs-hint">{{ t("config.form.empty") }}</div>
+        <div v-else class="empty-tabs-hint">{{ t("config.form.empty") }}</div>
       </div>
 
-    </div>
     <div class="actions-bar">
       <a-button :loading="testingConn" :disabled="testingConn" @click="testConnection(editingId)">
         <template #icon><ApiOutlined /></template>
@@ -243,8 +222,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
-import { writeConfig, syncToCodex, readConfig, testProviderConnectivity, fetchModels as fetchModelsApi, getProviderPresets } from "../../api/bridge"
-import type { ProviderConfig as PresetProviderConfig } from "../../api/bridge"
+import { writeConfig, syncToCodex, readConfig, testProviderConnectivity, fetchModels as fetchModelsApi } from "../../api/bridge"
 import { message } from "ant-design-vue"
 import { PlusOutlined, ReloadOutlined, ApiOutlined, InfoCircleOutlined, SaveOutlined, SyncOutlined } from "@ant-design/icons-vue"
 
@@ -277,51 +255,6 @@ const PRESETS = [
   { key: "chat_completions", values: { wireApi: "chat_completions" as const, apiKeyHeader: "Authorization" as const } },
   { key: "openai", values: { wireApi: "openai" as const, apiKeyHeader: "Authorization" as const } },
 ]
-
-const MODEL_PRESETS: { label: string; options: { label: string; value: string }[] }[] = [
-  { label: "DeepSeek", options: [
-    { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
-    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
-    { value: "deepseek-chat", label: "DeepSeek Chat" },
-    { value: "deepseek-reasoner", label: "DeepSeek Reasoner" },
-  ]},
-  { label: "OpenAI", options: [
-    { value: "gpt-5.5", label: "GPT-5.5" },
-    { value: "gpt-5.4", label: "GPT-5.4" },
-    { value: "o3", label: "o3" },
-    { value: "o4-mini", label: "o4-mini" },
-  ]},
-  { label: "Claude", options: [
-    { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-    { value: "claude-haiku-4-20250514", label: "Claude Haiku 4" },
-    { value: "claude-opus-4-20250514", label: "Claude Opus 4" },
-  ]},
-  { label: "Google Gemini", options: [
-    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-  ]},
-  { label: "GLM", options: [
-    { value: "glm-5.1", label: "GLM-5.1" },
-    { value: "glm-5", label: "GLM-5" },
-  ]},
-  { label: "Kimi", options: [
-    { value: "kimi-k2.7", label: "Kimi K2.7" },
-    { value: "kimi-k2.6", label: "Kimi K2.6" },
-  ]},
-  { label: "MiMo", options: [
-    { value: "mimo-v2.5", label: "MiMo V2.5" },
-    { value: "mimo-v2.5-pro", label: "MiMo V2.5 Pro" },
-  ]},
-  { label: "MiniMax", options: [
-    { value: "minimax-m3", label: "MiniMax M3" },
-    { value: "minimax-m2.7", label: "MiniMax M2.7" },
-  ]},
-  { label: "Qwen", options: [
-    { value: "qwen3.7-max", label: "Qwen3.7 Max" },
-    { value: "qwen3.7-plus", label: "Qwen3.7 Plus" },
-  ]},
-]
-
 const providerIds = ref<string[]>([])
 const providers = reactive<Record<string, Provider>>({})
 const activeId = ref("")
@@ -336,8 +269,8 @@ const saving = ref(false)
 const syncing = ref(false)
 const connResult = ref<null | { ok: boolean; status: number; latency_ms: number; message: string }>(null)
 
-const presets = ref<PresetProviderConfig[]>([])
-const fetchedModels = reactive<Record<string, string[]>>({})
+
+const modelOptions = reactive<Record<string, { value: string }[]>>({})
 const fetchingModels = reactive<Record<string, boolean>>({})
 
 // Per-provider slider rail refs
@@ -465,6 +398,12 @@ function onWireApiSelectChange(id: string, value: string) {
   }
 }
 
+function handleModelSearch(id: string, value: string) {
+  if (value && value.trim() && !modelOptions[id]?.some((o) => o.value === value)) {
+    modelOptions[id] = [...(modelOptions[id] || []), { value: value.trim() }]
+  }
+}
+
 async function testConnection(id: string) {
   const p = providers[id]
   if (!p || !p.baseUrl) { message.warning(t("config.form.test_need_url")); return }
@@ -481,15 +420,15 @@ async function testConnection(id: string) {
 
 async function doFetchModels(id: string) {
   const p = providers[id]
-  if (!p || !p.baseUrl) { message.warning("请先填写 Base URL"); return }
+  if (!p || !p.baseUrl) { message.warning(t("config.form.test_need_url")); return }
   fetchingModels[id] = true
   try {
     const models = await fetchModelsApi(p.baseUrl, p.apiKey || "", p.wireApi || "anthropic", p.apiKeyHeader || undefined)
-    fetchedModels[id] = models
-    if (models.length) message.success(`获取到 ${models.length} 个模型`, 3)
-    else message.info("未获取到模型", 3)
+    modelOptions[id] = models.map((m: string) => ({ value: m }))
+    if (models.length) message.success(t("config.form.fetch_models_success", { count: String(models.length) }), 3)
+    else message.info(t("config.form.fetch_models_empty"), 3)
   } catch (e: any) {
-    message.error("获取模型失败: " + (e?.message || String(e)), 4)
+    message.error(t("config.form.fetch_models_failed") + ": " + (e?.message || String(e)), 4)
   } finally {
     fetchingModels[id] = false
   }
@@ -507,6 +446,7 @@ function resetForm(id: string) {
   p.modelAutoCompactLimit = DEFAULT_COMPACT_LIMIT
   const m = PRESETS.find((x) => x.values.wireApi === p.wireApi)
   if (m) wirePresetKey[id] = m.key
+  modelOptions[id] = []
 }
 
 function onTabChange(key: string) {
@@ -532,30 +472,11 @@ function doAddProvider() {
   }
   if (!wirePresetKey[name]) wirePresetKey[name] = "anthropic"
   newProviderName.value = ""
+  modelOptions[name] = []
   showAddModal.value = false
   editingId.value = name
   const m = PRESETS.find((x) => x.values.wireApi === providers[name].wireApi)
   if (m) wirePresetKey[name] = m.key
-}
-
-function addPreset(cfg: PresetProviderConfig) {
-  const name = cfg.id
-  if (!name) return
-  if (!providerIds.value.includes(name)) providerIds.value.push(name)
-  providers[name] = {
-    wireApi: cfg.wire_api,
-    baseUrl: cfg.base_url,
-    model: cfg.model,
-    apiKey: "",
-    apiKeyHeader: cfg.api_key_header,
-    modelContextWindow: cfg.context_window,
-    modelAutoCompactLimit: cfg.compact_limit,
-  }
-  const m = PRESETS.find((x) => x.values.wireApi === cfg.wire_api)
-  if (m) wirePresetKey[name] = m.key
-  editingId.value = name
-  activeId.value = name
-  message.success(`已添加 "${cfg.title}"，请填入 API Key`, 4)
 }
 
 async function doRemoveProvider() {
@@ -568,6 +489,7 @@ async function doRemoveProvider() {
   delete ratioRails[id]
   delete wirePresetKey[id]
   showRemoveModal.value = false
+  delete modelOptions[id]
   removeTarget.value = ""
   if (editingId.value === id) {
     editingId.value = providerIds.value[0] || ""
@@ -582,6 +504,7 @@ function parseConfig(text: string) {
   providerIds.value = []
   for (const k of Object.keys(providers)) delete providers[k]
   for (const k of Object.keys(wirePresetKey)) delete wirePresetKey[k]
+  for (const k of Object.keys(modelOptions)) delete modelOptions[k]
   if (!text) { activeId.value = ""; editingId.value = ""; return }
 
   const lines = text.split("\n")
@@ -664,11 +587,6 @@ onMounted(async () => {
   } catch (e) {
     console.error("Failed to load config in ConnectionPanel", e)
   }
-  try {
-    presets.value = await getProviderPresets()
-  } catch (e) {
-    console.error("Failed to load presets", e)
-  }
 })
 </script>
 
@@ -741,6 +659,4 @@ onMounted(async () => {
   box-shadow: var(--shadow-md);
 }
 </style>
-
-
 
