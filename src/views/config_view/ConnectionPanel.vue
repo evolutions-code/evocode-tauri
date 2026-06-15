@@ -236,7 +236,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
-import { writeConfig, syncToCodex, readConfig, testProviderConnectivity, fetchModels as fetchModelsApi } from "../../api/bridge"
+import { writeConfig, syncToCodex, saveConfig, readConfig, testProviderConnectivity, fetchModels as fetchModelsApi } from "../../api/bridge"
+import type { ProviderConfig } from "../../api/bridge"
 import { message } from "ant-design-vue"
  import { PlusOutlined, ReloadOutlined, ApiOutlined, InfoCircleOutlined, SaveOutlined, SyncOutlined, CheckOutlined, DownloadOutlined } from "@ant-design/icons-vue"
 
@@ -563,11 +564,23 @@ function buildConfig(): string {
   }
   return blocks.join("\n").replace(/\n+$/, "\n")
 }
-
 async function handleSave() {
   saving.value = true
   try {
-    await writeConfig(buildConfig())
+    const provs: Record<string, ProviderConfig> = {}
+    for (const id of providerIds.value) {
+      const p = providers[id]
+      provs[id] = {
+        base_url: p.baseUrl,
+        wire_api: p.wireApi,
+        model: p.model,
+        api_key: p.apiKey,
+        api_key_header: p.apiKeyHeader,
+        model_context_window: p.modelContextWindow || DEFAULT_CONTEXT_WINDOW,
+        model_auto_compact_token_limit: p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT
+      }
+    }
+    await saveConfig({ provider: activeId.value, providers: provs })
     message.success("Config saved", 3)
   } catch (e: any) {
     message.error("Failed to save: " + (e?.message || String(e)), 4)
@@ -580,8 +593,20 @@ async function handleSyncToCodex(providerId: string) {
   if (!providerId || syncing.value) return
   syncing.value = true
   try {
-    const cfg = buildConfig()
-    await writeConfig(cfg)
+    const provs: Record<string, ProviderConfig> = {}
+    for (const id of providerIds.value) {
+      const p = providers[id]
+      provs[id] = {
+        base_url: p.baseUrl,
+        wire_api: p.wireApi,
+        model: p.model,
+        api_key: p.apiKey,
+        api_key_header: p.apiKeyHeader,
+        model_context_window: p.modelContextWindow || DEFAULT_CONTEXT_WINDOW,
+        model_auto_compact_token_limit: p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT
+      }
+    }
+    await saveConfig({ provider: activeId.value, providers: provs })
     await syncToCodex()
     message.success(t("config.sync.done") + " " + providerId, 3)
   } catch (e: any) {

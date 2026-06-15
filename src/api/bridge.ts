@@ -50,6 +50,33 @@ export async function readConfig(): Promise<string> {
 export async function writeConfig(content: string): Promise<void> {
   return invoke<void>('write_config', { content })
 }
+export interface ProviderConfig {
+  base_url?: string
+  wire_api?: string
+  model?: string
+  models?: string[]
+  api_key?: string
+  api_key_env?: string
+  api_key_header?: string
+  model_context_window?: number
+  model_auto_compact_token_limit?: number
+}
+
+export interface EvocodeConfig {
+  port?: number
+  provider?: string
+  base_url?: string
+  api_key?: string
+  api_key_env?: string
+  protocol?: string
+  max_tokens?: number
+  providers?: Record<string, ProviderConfig>
+}
+
+export async function saveConfig(config: EvocodeConfig): Promise<void> {
+  return invoke<void>('save_config', { config })
+}
+
 
 export async function syncToCodex(): Promise<void> {
   return invoke<void>('sync_to_codex')
@@ -61,6 +88,14 @@ export async function getBridgeLogs(): Promise<string[]> {
 
 export async function getAppVersion(): Promise<string> {
   return invoke<string>('get_app_version')
+}
+
+export async function getBridgePort(): Promise<number> {
+  return invoke<number>('get_bridge_port')
+}
+
+export async function setBridgePort(port: number): Promise<void> {
+  return invoke<void>('set_bridge_port', { port })
 }
 
 export { checkUpdate, type CheckUpdateResult } from './check_update'

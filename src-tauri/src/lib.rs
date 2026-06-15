@@ -18,18 +18,34 @@ pub type DbPool = sqlx::SqlitePool;
 
 pub struct BridgeState {
     handle: Arc<AsyncMutex<Option<tokio::task::JoinHandle<()>>>>,
-    port: u16,
-    logs: Arc<Mutex<Vec<String>>>,
+    port: std::sync::atomic::AtomicU16,
 }
 
 impl BridgeState {
     fn new(port: u16) -> Self {
         Self {
             handle: Arc::new(AsyncMutex::new(None)),
-            port,
-            logs: Arc::new(Mutex::new(Vec::new())),
+            port: std::sync::atomic::AtomicU16::new(port),
         }
     }
+
+    fn load_port_from_config() -> u16 {
+        load_config()
+            .ok()
+            .and_then(|c| c.port)
+            .unwrap_or(17761)
+    }
+
+    fn set_port(&self, port: u16) {
+        self.port.store(port, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+fn home_dir() -> PathBuf {
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .expect("Cannot find home directory")
 }
 
 fn get_config_path() -> Option<PathBuf> {
@@ -47,7 +63,6 @@ fn get_config_path() -> Option<PathBuf> {
     Some(primary)
 }
 
-fn setup_logging(logs: Arc<Mutex<Vec<String>>>) {
     // Custom timer that prints timestamps in the host's local timezone,
     // so log lines are no longer fixed to UTC.
     struct LocalTimer;
@@ -63,82 +78,6 @@ fn setup_logging(logs: Arc<Mutex<Vec<String>>>) {
             )
         }
     }
-    let _ = tracing_subscriber::fmt()
-        .with_ansi(false)
-        .with_timer(LocalTimer)
-        .with_writer(move || {
-            struct W(Arc<Mutex<Vec<String>>>);
-            impl std::io::Write for W {
-                fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-                    if let Ok(s) = std::str::from_utf8(buf) {
-                        let s = strip_ansi(s);
-                        if !s.is_empty() {
-                            let mut g = self.0.lock().unwrap();
-                            if g.len() >= 1000 {
-                                g.remove(0);
-                            }
-                            g.push(s.trim_end().to_string());
-                        }
-                    }
-                    Ok(buf.len())
-                }
-                fn flush(&mut self) -> std::io::Result<()> {
-                    Ok(())
-                }
-            }
-            W(logs.clone())
-        })
-        .try_init();
-}
-
-fn strip_ansi(s: &str) -> String {
-    let mut r = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '\x1b' {
-            if chars.next() == Some('[') {
-                while let Some(&ch) = chars.peek() {
-                    match ch {
-                        '0'..='9' | ';' => {
-                            chars.next();
-                        }
-                        'm' => {
-                            chars.next();
-                            break;
-                        }
-                        _ => break,
-                    }
-                }
-            }
-        } else if c == '[' {
-            let mut buf = String::from("[");
-            while let Some(&ch) = chars.peek() {
-                match ch {
-                    '0'..='9' | ';' => {
-                        buf.push(ch);
-                        chars.next();
-                    }
-                    'm' => {
-                        buf.push('m');
-                        chars.next();
-                        break;
-                    }
-                    _ => {
-                        buf.clear();
-                        break;
-                    }
-                }
-            }
-            if !buf.is_empty() && buf != "[" {
-                continue;
-            }
-            r.push('[');
-        } else {
-            r.push(c);
-        }
-    }
-    r
-}
 
 #[tauri::command]
 async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
@@ -147,11 +86,15 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
         return Err("Bridge is already running".into());
     }
 
-    state.logs.lock().unwrap().clear();
-    let config = load_config().unwrap_or_default();
+    let config = evocode_config::EvocodeConfig::load().unwrap_or_default();
     let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
 
+    let port = state.port.load(std::sync::atomic::Ordering::Relaxed);
+    let listen_addr: std::net::SocketAddr = format!("127.0.0.1:{}", port)
+        .parse()
+        .map_err(|e| format!("Invalid port: {}", e))?;
     let cfg = ServerConfig {
+        listen: listen_addr,
         codex_home: Some(codex_home),
         codex_config_overrides: config.codex_config_overrides(),
         codex_env: config.codex_env(),
@@ -167,7 +110,6 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
         ..Default::default()
     };
 
-    setup_logging(state.logs.clone());
 
     let handle = tokio::spawn(async move {
         if let Err(e) = evocode_proto::serve(cfg).await {
@@ -178,7 +120,7 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
     });
 
     *handle_guard = Some(handle);
-    Ok(format!("Bridge starting on port {}...", state.port))
+    Ok(format!("Bridge starting on port {}...", port))
 }
 
 #[tauri::command]
@@ -209,13 +151,36 @@ async fn bridge_status(state: State<'_, BridgeState>) -> Result<String, String> 
 
 #[tauri::command]
 async fn get_bridge_url(state: State<'_, BridgeState>) -> Result<String, String> {
-    Ok(format!("http://127.0.0.1:{}", state.port))
+    let port = state.port.load(std::sync::atomic::Ordering::Relaxed);
+    Ok(format!("http://127.0.0.1:{}", port))
 }
 
 #[tauri::command]
-async fn get_bridge_logs(state: State<'_, BridgeState>) -> Result<Vec<String>, String> {
-    let logs = state.logs.lock().unwrap();
-    Ok(logs.clone())
+async fn get_bridge_port(state: State<'_, BridgeState>) -> Result<u16, String> {
+    let port = state.port.load(std::sync::atomic::Ordering::Relaxed);
+    Ok(port)
+}
+
+#[tauri::command]
+async fn set_bridge_port(state: State<'_, BridgeState>, port: u16) -> Result<(), String> {
+    if port < 1024 {
+        return Err("Port must be between 1024 and 65535".into());
+    }
+    if state.handle.lock().await.is_some() {
+        return Err("Cannot change port while bridge is running. Please stop the bridge first.".into());
+    }
+    let mut config = evocode_config::EvocodeConfig::load().unwrap_or_default();
+    config.port = Some(port);
+    config.save().map_err(|e| e.to_string())?;
+    state.set_port(port);
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_bridge_logs() -> Result<Vec<String>, String> {
+    let log_path = home_dir().join(".evocode").join("logs").join("temp.log");
+    let content = std::fs::read_to_string(&log_path).unwrap_or_default();
+    Ok(content.lines().map(|l| l.to_string()).collect())
 }
 
 #[tauri::command]
@@ -232,18 +197,14 @@ async fn read_config() -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-async fn write_config(content: String) -> Result<(), String> {
-    let config_path =
-        get_config_path().ok_or_else(|| "Cannot find config directory".to_string())?;
 
-    tokio::fs::create_dir_all(config_path.parent().unwrap())
-        .await
-        .map_err(|e| e.to_string())?;
-    tokio::fs::write(&config_path, content)
-        .await
-        .map_err(|e| e.to_string())
+
+#[tauri::command]
+async fn save_config(config: evocode_config::EvocodeConfig) -> Result<(), String> {
+    config.save().map_err(|e| e.to_string())
 }
+
+
 
 #[tauri::command]
 async fn sync_to_codex() -> Result<(), String> {
@@ -1585,6 +1546,23 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Init fast_log once at startup
+    let log_dir = "target/logs/".to_string();
+    println!("Logging to {}", log_dir);
+    let _ = std::fs::create_dir_all(&log_dir);
+    use fast_log::config::Config;
+    use fast_log::plugin::file_split::{RollingType, KeepType, DateType, Rolling};
+    use fast_log::plugin::packer::LogPacker;
+    let _ = fast_log::init(
+        Config::new()
+            .chan_len(Some(100000))
+            .file_split(
+                &log_dir,
+                Rolling::new(RollingType::ByDate(DateType::Day)),
+                KeepType::KeepNum(2),
+                LogPacker{},
+            )
+    );
     let mut builder = tauri::Builder::default();
 
     #[cfg(desktop)]
@@ -1599,15 +1577,16 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
-        .manage(BridgeState::new(17761))
+        .manage(BridgeState::new(BridgeState::load_port_from_config()))
         .invoke_handler(tauri::generate_handler![
             start_bridge,
             stop_bridge,
             bridge_is_running,
             bridge_status,
             get_bridge_url,
+            get_bridge_port,
+            set_bridge_port,
             read_config,
-            write_config,
             sync_to_codex,
             get_bridge_logs,
             get_app_version,
@@ -1617,6 +1596,7 @@ pub fn run() {
             test_provider_connectivity,
             open_config_dir,
             fetch_models,
+            save_config,
         ])
         .on_window_event(handle_window_event)
         .setup(|app| {
