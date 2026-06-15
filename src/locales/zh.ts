@@ -182,6 +182,7 @@ export const zh = {
   "session.model": "模型",
   "session.tokens": "Token",
   "session.entries": "条目",
+  "session.context_tokens": "上下文",
   "session.total_tokens": "总 Tokens",
   "session.expand": "展开全部",
   "session.collapse": "收起全部",

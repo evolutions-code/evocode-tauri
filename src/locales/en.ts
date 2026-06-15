@@ -182,6 +182,7 @@ export const en = {
   "session.model": "Model",
   "session.tokens": "Tokens",
   "session.entries": "Entries",
+  "session.context_tokens": "Context",
   "session.total_tokens": "Total Tokens",
   "session.expand": "Expand All",
   "session.collapse": "Collapse All",
