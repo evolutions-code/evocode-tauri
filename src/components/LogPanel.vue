@@ -187,7 +187,7 @@ onMounted(() => {
   if (props.bridgeRunning) startPolling()
 })
 onUnmounted(stopPolling)
-</script></script>
+</script>
 
 <style scoped>
 .log-card { padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
