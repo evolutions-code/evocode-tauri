@@ -68,6 +68,58 @@ export async function openUrl(url: string): Promise<void> {
   return invoke<void>('open_url', { url })
 }
 
+// ===== Session Import =====
+
+export interface ImportableSession {
+  id: string
+  title: string
+  model: string
+  token_count: number
+  created_at: number
+}
+
+export interface ImportResult {
+  imported: number
+  failed: number
+  errors: string[]
+}
+
+export async function listImportSources(): Promise<string[]> {
+  return invoke<string[]>('list_import_sources')
+}
+
+export async function listImportableSessions(source: string): Promise<ImportableSession[]> {
+  return invoke<ImportableSession[]>('list_importable_sessions', { source })
+}
+
+export async function importSessions(source: string, sessionIds: string[]): Promise<ImportResult> {
+  return invoke<ImportResult>('import_sessions', { source, sessionIds })
+}
+
+// ===== Model Fetching =====
+
+export async function fetchModels(baseUrl: string, apiKey: string, wireApi: string, apiKeyHeader?: string): Promise<string[]> {
+  return invoke<string[]>('fetch_models', { baseUrl, apiKey, wireApi, apiKeyHeader })
+}
+
+// ===== Provider Presets =====
+
+export interface ProviderConfig {
+  id: string
+  title: string
+  description: string
+  wire_api: string
+  base_url: string
+  model: string
+  api_key_header: string
+  context_window: number
+  compact_limit: number
+}
+
+export async function getProviderPresets(): Promise<ProviderConfig[]> {
+  return invoke<ProviderConfig[]>('get_provider_presets')
+}
+
 
 
 export interface SessionInfo {
