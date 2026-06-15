@@ -57,7 +57,7 @@
   "config.providers.ok": "Yes",
   "config.providers.cancel": "No",
   "config.providers.remove_confirm": "Remove {name}?",
-  "config.providers.placeholder": "new provider id",
+   "config.providers.placeholder": "LLM model provider",
   "config.providers.add": "Add",
   "config.providers.active": "Codex Active:",
   "config.wire_api": "Wire API",
