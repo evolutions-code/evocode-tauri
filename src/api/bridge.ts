@@ -73,6 +73,16 @@ export interface EvocodeConfig {
   providers?: Record<string, ProviderConfig>
 }
 
+export interface LogTailResult {
+  lines: string[]
+  total_lines: number
+}
+
+export interface LogRangeResult {
+  lines: string[]
+  total_lines: number
+}
+
 export async function saveConfig(config: EvocodeConfig): Promise<void> {
   return invoke<void>('save_config', { config })
 }
@@ -84,6 +94,14 @@ export async function syncToCodex(): Promise<void> {
 
 export async function getBridgeLogs(): Promise<string[]> {
   return invoke<string[]>('get_bridge_logs')
+}
+
+export async function getBridgeLogsTail(count: number = 200): Promise<LogTailResult> {
+  return invoke<LogTailResult>('get_bridge_logs_tail', { count })
+}
+
+export async function getBridgeLogsRange(start: number, count: number): Promise<LogRangeResult> {
+  return invoke<LogRangeResult>('get_bridge_logs_range', { start, count })
 }
 
 export async function getAppVersion(): Promise<string> {

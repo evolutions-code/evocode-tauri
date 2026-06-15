@@ -4,6 +4,7 @@ mod fetchers;
 
 use serde::Serialize;
 use std::path::PathBuf;
+use std::io::BufRead;
 use std::sync::Arc;
 
 use evocode_config::load_config;
@@ -19,6 +20,18 @@ pub type DbPool = sqlx::SqlitePool;
 pub struct BridgeState {
     handle: Arc<AsyncMutex<Option<tokio::task::JoinHandle<()>>>>,
     port: std::sync::atomic::AtomicU16,
+}
+
+#[derive(Serialize)]
+pub struct LogTailResult {
+    pub lines: Vec<String>,
+    pub total_lines: usize,
+}
+
+#[derive(Serialize)]
+pub struct LogRangeResult {
+    pub lines: Vec<String>,
+    pub total_lines: usize,
 }
 
 impl BridgeState {
@@ -177,6 +190,63 @@ async fn get_bridge_logs() -> Result<Vec<String>, String> {
     let bytes = std::fs::read(&log_path).unwrap_or_default();
     let text = String::from_utf8_lossy(&bytes);
     Ok(text.lines().map(|l| l.to_string()).collect())
+}
+
+#[tauri::command]
+async fn get_bridge_logs_tail(count: usize) -> Result<LogTailResult, String> {
+    let log_path = PathBuf::from("target/logs/temp.log");
+    let log_path = match std::fs::canonicalize(&log_path) {
+        Ok(p) => p,
+        Err(_) => return Ok(LogTailResult { lines: vec![], total_lines: 0 }),
+    };
+    let file = match std::fs::File::open(&log_path) {
+        Ok(f) => f,
+        Err(_) => return Ok(LogTailResult { lines: vec![], total_lines: 0 }),
+    };
+    let reader = std::io::BufReader::new(file);
+    let mut total: usize = 0;
+    let mut circular: Vec<String> = Vec::with_capacity(count + 1);
+    for line in reader.lines() {
+        match line {
+            Ok(l) => {
+                total += 1;
+                if circular.len() >= count {
+                    circular.remove(0);
+                }
+                circular.push(l);
+            }
+            Err(_) => continue,
+        }
+    }
+    Ok(LogTailResult { lines: circular, total_lines: total })
+}
+
+#[tauri::command]
+async fn get_bridge_logs_range(start: usize, count: usize) -> Result<LogRangeResult, String> {
+    let log_path = PathBuf::from("target/logs/temp.log");
+    let log_path = match std::fs::canonicalize(&log_path) {
+        Ok(p) => p,
+        Err(_) => return Ok(LogRangeResult { lines: vec![], total_lines: 0 }),
+    };
+    let file = match std::fs::File::open(&log_path) {
+        Ok(f) => f,
+        Err(_) => return Ok(LogRangeResult { lines: vec![], total_lines: 0 }),
+    };
+    let reader = std::io::BufReader::new(file);
+    let mut total: usize = 0;
+    let mut collected: Vec<String> = Vec::with_capacity(count);
+    for line in reader.lines() {
+        match line {
+            Ok(l) => {
+                if total >= start && collected.len() < count {
+                    collected.push(l);
+                }
+                total += 1;
+            }
+            Err(_) => continue,
+        }
+    }
+    Ok(LogRangeResult { lines: collected, total_lines: total })
 }
 
 #[tauri::command]
@@ -1592,6 +1662,8 @@ pub fn run() {
             read_config,
             sync_to_codex,
             get_bridge_logs,
+            get_bridge_logs_tail,
+            get_bridge_logs_range,
             get_app_version,
             check_update,
             get_sessions,

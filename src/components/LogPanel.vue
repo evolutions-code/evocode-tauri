@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <div class="log-body" ref="bodyRef">
+    <div class="log-body" ref="bodyRef" @scroll="onScroll">
       <div v-if="logLines.length === 0" class="empty-state">
         <DatabaseOutlined class="empty-icon" />
         <div class="empty-title">{{ t("logs.empty_title") }}</div>
@@ -50,9 +50,11 @@ import {
   ClearOutlined,
   DatabaseOutlined,
 } from "@ant-design/icons-vue"
-import { getBridgeStatus, getBridgeLogs } from "../api/bridge"
+import { getBridgeStatus, getBridgeLogsTail, getBridgeLogsRange } from "../api/bridge"
 
 const { t } = useLocale()
+
+const PAGE_SIZE = 200
 
 const props = defineProps<{
   bridgeRunning: boolean
@@ -63,6 +65,11 @@ const status = ref<Status>(props.bridgeRunning ? "starting" : "stopped")
 const logLines = ref<string[]>([])
 const autoScroll = ref(true)
 const bodyRef = ref<HTMLElement | null>(null)
+/** File line index of the first element in `logLines` (0 = top of file) */
+const loadedFromLine = ref(0)
+/** Total lines currently in the log file */
+const totalLines = ref(0)
+const loadingMore = ref(false)
 
 const statusLabel = computed(() => {
   switch (status.value) {
@@ -92,29 +99,73 @@ function lineClass(line: string) {
 
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
+/// Fetch new lines appended since our last known total, then append to buffer
 async function pollStatus() {
   try {
     const s = await getBridgeStatus()
     status.value = s === "running" ? "running" : "stopped"
-    if (s === "running") {
-      const el = bodyRef.value
-      const wasAtBottom = el && (el.scrollHeight - el.scrollTop - el.clientHeight) < 50
+    if (s !== "running") return
 
-      logLines.value = await getBridgeLogs()
+    const el = bodyRef.value
+    const wasAtBottom = el && (el.scrollHeight - el.scrollTop - el.clientHeight) < 50
 
-      if (autoScroll.value && wasAtBottom) {
-        await nextTick()
-        if (el) el.scrollTop = el.scrollHeight
+    if (totalLines.value === 0) {
+      // First load: fetch last PAGE_SIZE lines
+      const result = await getBridgeLogsTail(PAGE_SIZE)
+      totalLines.value = result.total_lines
+      loadedFromLine.value = Math.max(0, result.total_lines - result.lines.length)
+      logLines.value = result.lines
+    } else {
+      // Fetch only newly appended lines
+      const range = await getBridgeLogsRange(totalLines.value, 100)
+      if (range.lines.length > 0) {
+        logLines.value = [...logLines.value, ...range.lines]
+        totalLines.value = range.total_lines
       }
+    }
+
+    // Auto-scroll to bottom only if user was already at bottom
+    if (autoScroll.value && wasAtBottom) {
+      await nextTick()
+      if (el) el.scrollTop = el.scrollHeight
     }
   } catch {
     status.value = "error"
   }
 }
 
+/// Scroll-up pagination: when user scrolls near top, load previous page
+async function onScroll() {
+  const el = bodyRef.value
+  if (!el || loadingMore.value || loadedFromLine.value === 0) return
+
+  if (el.scrollTop < 100) {
+    loadingMore.value = true
+    const prevScrollHeight = el.scrollHeight
+    const newStart = loadedFromLine.value >= PAGE_SIZE
+      ? loadedFromLine.value - PAGE_SIZE
+      : 0
+    const actualCount = loadedFromLine.value - newStart
+
+    if (actualCount > 0) {
+      const result = await getBridgeLogsRange(newStart, actualCount + PAGE_SIZE)
+      const newLines = result.lines.slice(0, actualCount)
+      loadedFromLine.value = newStart
+      logLines.value = [...newLines, ...logLines.value]
+
+      await nextTick()
+      // Preserve visual scroll position after prepending
+      el.scrollTop = el.scrollHeight - prevScrollHeight
+    }
+    loadingMore.value = false
+  }
+}
+
 function startPolling() {
   status.value = "starting"
   logLines.value = []
+  loadedFromLine.value = 0
+  totalLines.value = 0
   pollStatus()
   statusInterval = setInterval(pollStatus, 1000)
 }
@@ -123,6 +174,8 @@ function stopPolling() {
   if (statusInterval) { clearInterval(statusInterval); statusInterval = null }
   status.value = "stopped"
   logLines.value = []
+  loadedFromLine.value = 0
+  totalLines.value = 0
 }
 
 watch(() => props.bridgeRunning, (running) => {
@@ -134,7 +187,7 @@ onMounted(() => {
   if (props.bridgeRunning) startPolling()
 })
 onUnmounted(stopPolling)
-</script>
+</script></script>
 
 <style scoped>
 .log-card { padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
