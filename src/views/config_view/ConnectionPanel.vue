@@ -65,7 +65,11 @@
                 :description="t('config.form.test_latency') + ': ' + connResult.latency_ms + ' ms'"
                 show-icon closable @close="connResult = null" />
               <a-form layout="vertical" class="form" :model="item">
-                <a-row :gutter="16">
+                <a-form-item :label="t('config.form.base_url')" required>
+                  <a-input v-model:value="item.baseUrl" :placeholder="t('config.form.base_url_placeholder')" />
+                </a-form-item>
+                
+<a-row :gutter="16">
                   <a-col :span="12">
                     <a-form-item :label="t('config.form.model')" required>
                       <div style="display:flex;gap:6px;align-items:center">
@@ -109,10 +113,8 @@
                     </a-form-item>
                   </a-col>
                 </a-row>
-                <a-form-item :label="t('config.form.base_url')" required>
-                  <a-input v-model:value="item.baseUrl" :placeholder="t('config.form.base_url_placeholder')" />
-                </a-form-item>
-                <a-row :gutter="16">
+                
+<a-row :gutter="16">
                   <a-col :span="12">
                     <a-form-item :label="t('config.form.api_key')">
                       <a-input-password v-model:value="item.apiKey" :placeholder="t('config.form.api_key_placeholder')" />
@@ -252,7 +254,7 @@ interface Provider {
 
 const CONTEXT_MIN = 16_000
 const CONTEXT_MAX = 10_000_000
-const DEFAULT_CONTEXT_WINDOW = 128_000
+const DEFAULT_CONTEXT_WINDOW = 256_000
 const DEFAULT_COMPACT_LIMIT = 100_000
 
 const LIMIT_PRESETS = [
