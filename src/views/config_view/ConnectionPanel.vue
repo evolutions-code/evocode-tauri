@@ -1,5 +1,27 @@
 ﻿<template>
   <div class="connection-panel">
+    <div class="active-with-sync">
+      <a-tag v-if="activeId" class="active-tag">{{ t("config.providers.active") }} {{ activeId }}</a-tag>
+      <a-select
+        v-if="providerIds.length"
+        v-model:value="activeId"
+        style="width: 240px;"
+        size="small"
+        :loading="syncing"
+        @change="handleSyncToCodex">
+        <a-select-option v-for="id in providerIds" :key="id" :value="id">
+          {{ id }}
+        </a-select-option>
+      </a-select>
+      <a-button
+        v-if="providerIds.length"
+        size="small"
+        :loading="syncing"
+        @click="handleSyncToCodex(activeId)">
+        同步
+      </a-button>
+      <a-tag v-else style="font-weight: 400;">{{ t("config.sync.no_providers") }}</a-tag>
+    </div>
     <div class="glass panel">
       <div class="panel-head">
         <div style="display: inline-flex; align-items: center; gap: 10px;">
@@ -11,28 +33,6 @@
         </div>
       </div>
 
-        <div class="active-with-sync">
-          <a-tag v-if="activeId" class="active-tag">{{ t("config.providers.active") }} {{ activeId }}</a-tag>
-          <a-select
-            v-if="providerIds.length"
-            v-model:value="activeId"
-            style="width: 240px;"
-            size="small"
-            :loading="syncing"
-            @change="handleSyncToCodex">
-            <a-select-option v-for="id in providerIds" :key="id" :value="id">
-              {{ id }}
-            </a-select-option>
-          </a-select>
-          <a-button
-            v-if="providerIds.length"
-            size="small"
-            :loading="syncing"
-            @click="handleSyncToCodex(activeId)">
-            同步
-          </a-button>
-          <a-tag v-else style="font-weight: 400;">{{ t("config.sync.no_providers") }}</a-tag>
-        </div>
       <a-tabs
         v-if="providerIds.length"
         type="editable-card"
