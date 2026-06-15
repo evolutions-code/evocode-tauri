@@ -152,7 +152,7 @@
                   <div v-for="p in LIMIT_PRESETS" :key="p.key" class="slider-stop"
                     :class="{ active: item.modelContextWindow === p.context }"
                     @click="applyLimitPreset(key, p.key)">
-                    <div class="stop-dot" :style="{ color: p.key === 'compact' ? '#34d399' : '#4d7dff' }" />
+                    <div class="stop-dot" :style="{ color: p.key === 'compact' ? '#34d399' : '#808080' }" />
                     <div class="stop-name">{{ t(p.labelKey) }}</div>
                     <div class="stop-label">{{ contextLabel(p.context) }}</div>
                   </div>
@@ -606,8 +606,8 @@ onMounted(async () => {
 .quick-add-card {
   display: flex; align-items: flex-start; gap: 14px;
   padding: 16px; border-radius: var(--r-lg);
-  background: linear-gradient(135deg, rgba(77,125,255,0.10), rgba(139,92,246,0.05));
-  border: 1px solid rgba(77,125,255,0.25);
+  background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.25);
 }
 .quick-add-icon { font-size: 28px; line-height: 1; flex-shrink: 0; margin-top: 2px; }
 .quick-add-content { display: flex; flex-direction: column; gap: 6px; flex: 1; }
@@ -621,7 +621,7 @@ onMounted(async () => {
 .form :deep(.ant-form-item-label > label) { color: var(--text-2); font-size: 12.5px; }
 .opt-row { display: inline-flex; align-items: center; gap: 8px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.dot.blue { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
+.dot.blue { background: #808080; box-shadow: 0 0 8px #808080; }
 .dot.purple { background: #a78bfa; box-shadow: 0 0 8px #a78bfa; }
 .dot.cyan { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
 .slider-block { display: flex; flex-direction: column; gap: 12px; }
@@ -630,10 +630,10 @@ onMounted(async () => {
 .slider-value { font-size: 22px; font-weight: 700; color: var(--text-1); }
 .compact-tag { color: var(--text-2); }
 .slider-rail { position: relative; height: 12px; border-radius: 999px; background: linear-gradient(90deg, var(--bg-elev-3), var(--bg-elev-2)); border: 1px solid var(--border); margin: 22px 6px 12px; cursor: pointer; user-select: none; touch-action: none; }
-.slider-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #4d7dff, #8b5cf6); border-radius: 999px; box-shadow: 0 0 12px rgba(77,125,255,0.45); transition: width .08s linear; }
+.slider-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #808080; border-radius: 999px; box-shadow: 0 0 8px rgba(255,255,255,0.10); transition: width .08s linear; }
 .slider-fill.compact { background: linear-gradient(90deg, #34d399, #22d3ee); box-shadow: 0 0 10px rgba(52,211,153,0.35); }
-.slider-thumb { position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: white; border: 3px solid #4d7dff; transform: translate(-50%, -50%); box-shadow: 0 0 14px rgba(77,125,255,0.55); cursor: grab; transition: left .08s linear; z-index: 2; }
-.slider-thumb:hover { box-shadow: 0 6px 18px rgba(77,125,255,0.65); }
+.slider-thumb { position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: white; border: 3px solid #ffffff; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(255,255,255,0.15); cursor: grab; transition: left .08s linear; z-index: 2; }
+.slider-thumb:hover { box-shadow: 0 6px 18px rgba(255,255,255,0.20); }
 .slider-thumb:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.08); }
 .thumb-tip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 6px; background: var(--bg-elev-3); border: 1px solid var(--border-strong); color: var(--text-1); font-size: 11px; white-space: nowrap; font-weight: 600; pointer-events: none; opacity: 0; transition: opacity .15s ease; }
 .slider-thumb:hover .thumb-tip, .slider-thumb:active .thumb-tip { opacity: 1; }
@@ -641,7 +641,7 @@ onMounted(async () => {
 .slider-stops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
 .slider-stop { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r-md); background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text-2); cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .15s ease; }
 .slider-stop:hover { border-color: var(--border-strong); color: var(--text-1); transform: translateY(-1px); }
-.slider-stop.active { color: var(--text-1); border-color: rgba(77,125,255,0.5); background: linear-gradient(135deg, rgba(77,125,255,0.12), rgba(139,92,246,0.06)); box-shadow: 0 0 0 1px rgba(77,125,255,0.18); }
+.slider-stop.active { color: var(--text-1); border-color: rgba(255,255,255,0.5); background: linear-gradient(135deg, rgba(128,128,128,0.12), rgba(128,128,128,0.06)); box-shadow: 0 0 0 1px rgba(128,128,128,0.18); }
 .stop-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
 .stop-name { font-size: 12px; }
 .stop-label { font-size: 13px; font-weight: 700; color: var(--text-1); }

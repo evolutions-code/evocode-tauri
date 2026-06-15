@@ -3,13 +3,13 @@
     :theme="{
       algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
       token: {
-        colorPrimary: '#4d7dff',
-        colorInfo: '#4d7dff',
+        colorPrimary: '#cccccc',
+        colorInfo: '#cccccc',
         colorSuccess: '#34d399',
         colorWarning: '#fbbf24',
         colorError: '#f87171',
-        colorBgBase: isDark ? '#0b0d12' : '#f5f7fb',
-        colorTextBase: isDark ? '#f5f7fb' : '#0f172a',
+        colorBgBase: isDark ? '#000000' : '#f5f5f5',
+        colorTextBase: isDark ? '#ffffff' : '#111111',
         borderRadius: 10,
         fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, PingFang SC, Microsoft YaHei, sans-serif',
         controlHeight: 36,
@@ -24,7 +24,7 @@
         Menu: {
           itemBg: 'transparent',
           subMenuItemBg: 'transparent',
-          itemSelectedBg: 'rgba(77,125,255,0.16)',
+          itemSelectedBg: 'rgba(255,255,255,0.10)',
           itemSelectedColor: '#f5f7fb',
           itemHoverBg: 'rgba(255,255,255,0.04)',
         },
@@ -37,7 +37,19 @@
           itemSelectedColor: 'var(--text-1)',
         },
         Button: {
-          colorPrimaryHover: '#6a96ff',
+          colorPrimaryHover: '#dddddd',
+        },
+        Input: {
+          colorBgContainer: 'rgba(255,255,255,0.04)',
+          colorBorder: 'rgba(255,255,255,0.12)',
+          colorPrimaryHover: '#cccccc',
+          colorPrimaryActive: '#cccccc',
+        },
+        Select: {
+          colorBgContainer: 'rgba(255,255,255,0.04)',
+          colorBorder: 'rgba(255,255,255,0.12)',
+          colorPrimaryHover: '#cccccc',
+          colorPrimaryActive: '#cccccc',
         },
       },
     }"

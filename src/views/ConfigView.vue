@@ -47,7 +47,7 @@ const activeKey = ref("provider")
 .config-tabs :deep(.ant-tabs-tab) { padding: 8px 4px; color: var(--text-3); }
 .config-tabs :deep(.ant-tabs-tab:hover) { color: var(--text-1); }
 .config-tabs :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) { color: var(--text-1) !important; }
-.config-tabs :deep(.ant-tabs-ink-bar) { background: linear-gradient(90deg, #4d7dff, #8b5cf6); height: 3px; border-radius: 2px; }
+.config-tabs :deep(.ant-tabs-ink-bar) { background: #cccccc; height: 3px; border-radius: 2px; }
 
 .panel { padding: 20px 22px; }
 .glass { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--r-lg); backdrop-filter: blur(14px) saturate(140%); }

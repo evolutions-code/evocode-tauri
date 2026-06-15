@@ -25,6 +25,7 @@
       <a-button
         class="toggle"
         :type="status === 'running' ? 'default' : 'primary'"
+        :style="status !== 'running' ? { backgroundColor: '#4d7dff', borderColor: '#4d7dff' } : undefined"
         :danger="status === 'running'"
         :loading="loading"
         size="large"

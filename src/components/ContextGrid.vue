@@ -181,12 +181,12 @@ const gridStyle = computed(() => ({
 
 /* Filled cell levels */
 .cell.l1 {
-  background: rgba(77, 125, 255, 0.25);
-  border-color: rgba(77, 125, 255, 0.15);
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.15);
 }
 .cell.l2 {
-  background: rgba(77, 125, 255, 0.45);
-  border-color: rgba(77, 125, 255, 0.25);
+  background: rgba(255,255,255,0.45);
+  border-color: rgba(255,255,255,0.25);
 }
 .cell.l3 {
   background: rgba(34, 211, 238, 0.45);
@@ -202,12 +202,12 @@ const gridStyle = computed(() => ({
   border-color: var(--border);
 }
 :global(html[data-theme="light"]) .cell.l1 {
-  background: rgba(77, 125, 255, 0.15);
-  border-color: rgba(77, 125, 255, 0.10);
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.10);
 }
 :global(html[data-theme="light"]) .cell.l2 {
-  background: rgba(77, 125, 255, 0.30);
-  border-color: rgba(77, 125, 255, 0.18);
+  background: rgba(255,255,255,0.30);
+  border-color: rgba(255,255,255,0.18);
 }
 :global(html[data-theme="light"]) .cell.l3 {
   background: rgba(34, 211, 238, 0.30);

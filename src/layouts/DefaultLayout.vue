@@ -261,7 +261,7 @@ onMounted(async () => {
   border-radius: 9px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #4d7dff 0%, #8b5cf6 100%);
+  background: #666666;
   color: #fff;
   font-size: 16px;
   box-shadow: var(--shadow-glow);
@@ -301,10 +301,10 @@ onMounted(async () => {
   background: var(--bg-elev-3) !important;
 }
 .app-menu :deep(.ant-menu-item-selected) {
-  background: linear-gradient(135deg, rgba(77,125,255,0.18), rgba(139,92,246,0.12)) !important;
+  background: rgba(255,255,255,0.08) !important;
   color: var(--text-1) !important;
-  border: 1px solid rgba(77,125,255,0.35);
-  box-shadow: inset 0 0 0 1px rgba(77,125,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 .app-menu :deep(.ant-menu-item-selected .anticon) { color: var(--brand-300); }
 

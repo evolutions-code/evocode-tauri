@@ -198,7 +198,7 @@ onMounted(async () => {
   width: 3px;
   height: 14px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #22d3ee, #4d7dff);
+  background: linear-gradient(180deg, #888888, #444444);
 }
 .sessions-header .title {
   font-weight: 600;

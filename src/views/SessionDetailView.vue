@@ -380,8 +380,8 @@ onMounted(async () => {
   overflow-wrap: anywhere;
 }
 .user-bubble {
-  background: linear-gradient(180deg, rgba(77, 125, 255, 0.18), rgba(77, 125, 255, 0.10));
-  border-color: rgba(77, 125, 255, 0.30);
+  background: linear-gradient(180deg, rgba(128, 128, 128, 0.18), rgba(255,255,255,0.10));
+  border-color: rgba(255,255,255,0.30);
 }
 .assistant-bubble {
   background: var(--bg-elev-2);
@@ -405,7 +405,7 @@ onMounted(async () => {
   letter-spacing: 0.04em;
   border: 1px solid var(--border);
 }
-.user-tag { background: rgba(77, 125, 255, 0.18); color: #4d7dff; }
+.user-tag { background: rgba(128, 128, 128, 0.18); color: #808080; }
 .assistant-tag { background: rgba(34, 211, 238, 0.18); color: #22d3ee; }
 .bubble-body { white-space: normal; }
 .bubble-body :deep(p) { margin: 4px 0; }
@@ -495,7 +495,7 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.04em;
 }
-.kind-function { background: rgba(77, 125, 255, 0.18); color: #4d7dff; }
+.kind-function { background: rgba(128, 128, 128, 0.18); color: #808080; }
 .kind-custom { background: rgba(34, 211, 238, 0.18); color: #22d3ee; }
 .tool-name { font-weight: 600; color: var(--text-1); }
 .tool-callid { color: var(--text-4); font-size: 10px; }
