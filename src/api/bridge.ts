@@ -64,6 +64,7 @@ export interface ProviderConfig {
 
 export interface EvocodeConfig {
   port?: number
+  max_request_body_size?: number | null
   provider?: string
   base_url?: string
   api_key?: string
@@ -114,6 +115,10 @@ export async function getBridgePort(): Promise<number> {
 
 export async function setBridgePort(port: number): Promise<void> {
   return invoke<void>('set_bridge_port', { port })
+}
+
+export async function setMaxRequestBodySize(size: number | null): Promise<void> {
+  return invoke<void>('set_max_request_body_size', { size })
 }
 
 export { checkUpdate, type CheckUpdateResult } from './check_update'

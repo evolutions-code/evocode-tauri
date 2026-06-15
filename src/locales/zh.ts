@@ -111,6 +111,11 @@ export const zh = {
   "config.bridge_port.error": "保存失败",
   "config.bridge_port.invalid": "端口必须在 1024 和 65535",
   "config.bridge_port.running_warn": "桥已在执行",
+  "config.max_body_size.title": "最大请求体大小",
+  "config.max_body_size.desc": "最大请求体大小（MB），默认 1024。填 0 为无限。重启桥接生效。",
+  "config.max_body_size.saved": "最大请求体大小已保存，请重启桥接",
+  "config.max_body_size.error": "保存最大请求体大小失败",
+  "config.max_body_size.unit": "MB",
   "config.limits.auto_compact_tip": "超过此限制时自动压缩上下文，保留最近对话。",
   "config.limits.auto_compact": "自动压缩限制",
   "config.limits.title": "上下文与自动压缩",
@@ -194,4 +199,5 @@ export const zh = {
   "session.collapse": "收起全部",
   "session.empty": "暂无可读内容",
 }
+
 

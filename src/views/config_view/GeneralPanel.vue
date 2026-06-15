@@ -29,6 +29,26 @@
     <a-divider class="row-divider" />
     <div class="setting-row">
       <div class="setting-meta">
+        <div class="setting-name">{{ t("config.max_body_size.title") }}</div>
+        <div class="setting-desc muted-3">{{ t("config.max_body_size.desc") }}</div>
+      </div>
+      <div class="setting-control">
+        <a-input-number
+          v-model:value="maxBodySizeMB"
+          :min="0"
+          :max="1048576"
+          :disabled="bodySizeLoading"
+          style="width: 140px"
+        />
+        <span style="margin-left: 6px; color: var(--text-3); font-size: 13px;">{{ t("config.max_body_size.unit") }}</span>
+        <a-button type="primary" @click="saveMaxBodySize" :loading="bodySizeLoading" style="margin-left: 8px">
+          {{ t("config.save") }}
+        </a-button>
+      </div>
+    </div>
+    <a-divider class="row-divider" />
+    <div class="setting-row">
+      <div class="setting-meta">
         <div class="setting-name">{{ t("config.configdir.title") }}</div>
         <div class="setting-desc muted-3">{{ configDirHint }}</div>
       </div>
@@ -45,7 +65,7 @@ import { ref, onMounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
 import { message } from "ant-design-vue"
 import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart"
-import { openConfigDir as openConfigDirApi, getBridgePort, setBridgePort } from "../../api/bridge"
+import { openConfigDir as openConfigDirApi, getBridgePort, setBridgePort, setMaxRequestBodySize, readConfig } from "../../api/bridge"
 import { FolderOpenOutlined } from "@ant-design/icons-vue"
 
 const { t } = useLocale()
@@ -55,11 +75,14 @@ const openingDir = ref(false)
 const configDirHint = ref("")
 const bridgePort = ref(17761)
 const portLoading = ref(false)
+const maxBodySizeMB = ref<number>(1024)
+const bodySizeLoading = ref(false)
 
 onMounted(() => {
   buildConfigDirHint()
   loadAutostartStatus()
   loadPort()
+  loadMaxBodySize()
 })
 
 function buildConfigDirHint() {
@@ -105,6 +128,37 @@ async function savePort() {
     loadPort()
   } finally {
     portLoading.value = false
+  }
+}
+
+async function loadMaxBodySize() {
+  try {
+    const toml = await readConfig()
+    const m = toml.match(/^max_request_body_size\s*=\s*(\d+)/m)
+    if (m) {
+      const bytes = parseInt(m[1], 10)
+      maxBodySizeMB.value = bytes > 0 ? Math.round(bytes / 1048576) : 0
+    } else {
+      // not set ? default 1024 MB
+      maxBodySizeMB.value = 1024
+    }
+  } catch {
+    maxBodySizeMB.value = 1024
+  }
+}
+
+async function saveMaxBodySize() {
+  const mb = maxBodySizeMB.value
+  // Convert MB ? bytes: null means None (use server default 1 GB)
+  const bytes = mb > 0 ? mb * 1048576 : null
+  bodySizeLoading.value = true
+  try {
+    await setMaxRequestBodySize(bytes)
+    message.success(t("config.max_body_size.saved"), 3)
+  } catch (e: any) {
+    message.error(t("config.max_body_size.error") + ": " + (e?.message || String(e)), 4)
+  } finally {
+    bodySizeLoading.value = false
   }
 }
 

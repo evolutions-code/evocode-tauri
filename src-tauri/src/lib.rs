@@ -185,6 +185,13 @@ async fn set_bridge_port(state: State<'_, BridgeState>, port: u16) -> Result<(),
 }
 
 #[tauri::command]
+async fn set_max_request_body_size(size: Option<u64>) -> Result<(), String> {
+    let mut config = evocode_config::EvocodeConfig::load().unwrap_or_default();
+    config.max_request_body_size = size;
+    config.save().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn get_bridge_logs() -> Result<Vec<String>, String> {
     let log_path = PathBuf::from("target/logs/temp.log");
     let bytes = std::fs::read(&log_path).unwrap_or_default();
@@ -1659,6 +1666,7 @@ pub fn run() {
             get_bridge_url,
             get_bridge_port,
             set_bridge_port,
+            set_max_request_body_size,
             read_config,
             sync_to_codex,
             get_bridge_logs,
