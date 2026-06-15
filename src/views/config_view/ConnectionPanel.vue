@@ -56,7 +56,7 @@
               <div class="tab-section-head">
                 <div class="tab-section-title">{{ t("config.form.title") }}</div>
                 <a-button size="small" @click="resetForm(key)">
-                  <template #icon><ReloadOutlined /></template> Reset
+                  <template #icon><ReloadOutlined /></template> {{ t("config.form.reset") }}
                 </a-button>
               </div>
               <a-alert v-if="connResult" class="conn-alert"
@@ -68,13 +68,13 @@
                 <a-row :gutter="16">
                   <a-col :span="12">
                     <a-form-item :label="t('config.form.model')" required>
-                      <div style="display:flex;gap:6px">
+                      <div style="display:flex;gap:6px;align-items:center">
                         <a-auto-complete
                           v-model:value="item.model"
                           style="flex:1"
                           :options="modelOptions[key]"
                           :placeholder="t('config.form.model_select_placeholder')"
-                          :filter-option="(input: string, option: any) => option.value?.toString().toLowerCase().includes(input.toLowerCase())"
+                          :filter-option="() => true"
                           backfill
                         >
                           <template #default>
@@ -83,11 +83,15 @@
                                 <CaretDownOutlined style="font-size: 10px; color: var(--text-3); pointer-events: none;" />
                               </template>
                             </a-input>
+                         </template>
+                          <template #option="{ value }">
+                            <CheckOutlined v-if="value === item.model" style="color: #4f7cff; margin-right: 6px;" />
+                            {{ value }}
                           </template>
-                        </a-auto-complete>
+                       </a-auto-complete>
                         <a-tooltip :title="t('config.form.fetch_models')">
                           <a-button size="small" :loading="fetchingModels[key]" @click="doFetchModels(key)">
-                            <template #icon><ReloadOutlined /></template>
+                          <template #icon><DownloadOutlined /></template>
                           </a-button>
                         </a-tooltip>
                       </div>
@@ -233,7 +237,7 @@ import { ref, reactive, onMounted, onUnmounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
 import { writeConfig, syncToCodex, readConfig, testProviderConnectivity, fetchModels as fetchModelsApi } from "../../api/bridge"
 import { message } from "ant-design-vue"
- import { PlusOutlined, ReloadOutlined, ApiOutlined, InfoCircleOutlined, SaveOutlined, SyncOutlined } from "@ant-design/icons-vue"
+ import { PlusOutlined, ReloadOutlined, ApiOutlined, InfoCircleOutlined, SaveOutlined, SyncOutlined, CheckOutlined, DownloadOutlined } from "@ant-design/icons-vue"
 
 const { t } = useLocale()
 
@@ -621,7 +625,21 @@ onMounted(async () => {
 .prov-tabs { margin-top: 4px; }
 .prov-tabs :deep(.ant-tabs-nav) { margin-bottom: 0; }
 .prov-tabs :deep(.ant-tabs-tab) { font-size: 13px; padding: 4px 12px; }
-.form :deep(.ant-form-item-label > label) { color: var(--text-2); font-size: 12.5px; }
+ .form :deep(.ant-form-item-label > label) { color: var(--text-2); font-size: 12.5px; }
+ .form :deep(.ant-input-affix-wrapper) {
+   background: var(--bg-elev-3) !important;
+   backdrop-filter: none;
+   -webkit-backdrop-filter: none;
+ }
+ .form :deep(.ant-input) {
+   background: transparent !important;
+   backdrop-filter: none;
+   -webkit-backdrop-filter: none;
+ }
+ .form :deep(.ant-input::placeholder) {
+   opacity: 0.65 !important;
+   color: var(--text-3) !important;
+ }
 .opt-row { display: inline-flex; align-items: center; gap: 8px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .dot.blue { background: #808080; box-shadow: 0 0 8px #808080; }
