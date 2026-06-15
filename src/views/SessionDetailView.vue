@@ -41,19 +41,19 @@
     <section v-if="viewMode === 'chat'" class="thread">
       <template v-for="(item, _idx) in zippedEntries" :key="_idx">
         <div class="entry-card" :class="['entry-' + (item as any).kind, (item as any).kind === 'user' ? 'msg-right' : (item as any).kind === 'assistant' ? 'msg-left' : '']">
-          <div class="entry-head" @click="toggleTool((item as any).call_id || (item as any).kind)" style="cursor:pointer">
+          <div class="entry-head" @click="toggleTool((item as any).call_id ?? `e-${_idx}`)" style="cursor:pointer">
             <span class="entry-kind" :class="'kind-' + (item as any).kind">{{ (item as any).kind }}</span>
             <span class="entry-name" v-if="(item as any).name">{{ (item as any).name }}</span>
             <span class="entry-callid" v-if="(item as any).call_id">{{ shortId((item as any).call_id) }}</span>
-            <span class="collapse-arrow">{{ expandedTools.has((item as any).call_id || (item as any).kind) ? '▾' : '▸' }}</span>
+            <span class="collapse-arrow">{{ expandedTools.has((item as any).call_id ?? `e-${_idx}`) ? '▾' : '▸' }}</span>
             <span class="ts" v-if="(item as any).timestamp">{{ formatTs((item as any).timestamp) }}</span>
           </div>
-          <div v-if="expandedTools.has((item as any).call_id || (item as any).kind) || (item as any).kind === 'user' || (item as any).kind === 'assistant'" class="entry-body">
+          <div v-if="expandedTools.has((item as any).call_id ?? `e-${_idx}`) || (item as any).kind === 'user' || (item as any).kind === 'assistant'" class="entry-body">
             <div v-if="(item as any).kind === 'user' || (item as any).kind === 'assistant'" class="md" v-html="renderMarkdown((item as any).text || '')" />
             <div v-else-if="(item as any).kind === 'reasoning'" class="reasoning-text">{{ (item as any).text }}</div>
             <pre v-else class="entry-json"><code>{{ formatEntry(item as any) }}</code></pre>
           </div>
-          <div v-if="expandedTools.has((item as any).call_id || (item as any).kind) && (item as any).call_id && toolOutputs.has((item as any).call_id)" class="entry-output">
+          <div v-if="expandedTools.has((item as any).call_id ?? `e-${_idx}`) && (item as any).call_id && toolOutputs.has((item as any).call_id)" class="entry-output">
             <div class="output-label">OUTPUT</div>
             <pre><code class="output-content">{{ toolOutputs.get((item as any).call_id) }}</code></pre>
           </div>
