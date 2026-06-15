@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="connection-panel">
     <div class="active-with-sync">
       <a-tag v-if="activeId" class="active-tag">{{ t("config.providers.active") }} {{ activeId }}</a-tag>
@@ -189,14 +189,16 @@
       </div>
 
     <div class="actions-bar">
-      <a-button :loading="testingConn" :disabled="testingConn" @click="testConnection(editingId)">
-        <template #icon><ApiOutlined /></template>
-        {{ t("config.form.test") }}
-      </a-button>
-      <a-button type="primary" :loading="saving" :disabled="saving" @click="handleSave">
-        <template #icon><SaveOutlined /></template>
-        {{ t("config.save") }}
-      </a-button>
+     <a-button :loading="testingConn" :disabled="testingConn" @click="testConnection(editingId)">
+       <template #icon><ApiOutlined /></template>
+       {{ t("config.form.test") }}
+     </a-button>
+      <a-config-provider :theme="{ token: { colorPrimary: '#4f7cff' } }">
+        <a-button type="primary" :loading="saving" :disabled="saving" @click="handleSave">
+          <template #icon><SaveOutlined /></template>
+          {{ t("config.save") }}
+        </a-button>
+      </a-config-provider>
     </div>
 
     <a-modal
@@ -630,7 +632,7 @@ onMounted(async () => {
 .slider-value { font-size: 22px; font-weight: 700; color: var(--text-1); }
 .compact-tag { color: var(--text-2); }
 .slider-rail { position: relative; height: 12px; border-radius: 999px; background: linear-gradient(90deg, var(--bg-elev-3), var(--bg-elev-2)); border: 1px solid var(--border); margin: 22px 6px 12px; cursor: pointer; user-select: none; touch-action: none; }
-.slider-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #808080; border-radius: 999px; box-shadow: 0 0 8px rgba(255,255,255,0.10); transition: width .08s linear; }
+ .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #4f7cff, #22d3ee); border-radius: 999px; box-shadow: 0 0 10px rgba(79, 124, 255, 0.3); transition: width .08s linear; }
 .slider-fill.compact { background: linear-gradient(90deg, #34d399, #22d3ee); box-shadow: 0 0 10px rgba(52,211,153,0.35); }
 .slider-thumb { position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: white; border: 3px solid #ffffff; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(255,255,255,0.15); cursor: grab; transition: left .08s linear; z-index: 2; }
 .slider-thumb:hover { box-shadow: 0 6px 18px rgba(255,255,255,0.20); }
@@ -658,5 +660,15 @@ onMounted(async () => {
   backdrop-filter: blur(14px) saturate(140%);
   box-shadow: var(--shadow-md);
 }
-</style>
 
+/* Save button: gray when disabled */
+.actions-bar :deep(.ant-btn-primary[disabled]) {
+  background: #5a5a5a !important;
+  border-color: #5a5a5a !important;
+  color: rgba(255,255,255,0.25) !important;
+}
+.actions-bar :deep(.ant-btn-primary[disabled]:hover) {
+  background: #5a5a5a !important;
+  border-color: #5a5a5a !important;
+}
+</style>
