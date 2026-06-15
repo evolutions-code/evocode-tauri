@@ -379,16 +379,20 @@ onMounted(async () => {
 .app-content {
   padding: 24px 28px 40px;
   min-height: calc(100vh - var(--header-h));
+  height: calc(100vh - var(--header-h));
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .content-inner {
   max-width: 1080px;
   margin: 0 auto;
   width: 100%;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 @media (max-width: 720px) {

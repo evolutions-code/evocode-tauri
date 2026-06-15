@@ -183,7 +183,7 @@ onMounted(async () => {
 })
 </script>
 <style scoped>
-.session-detail { display: flex; flex-direction: column; height: 100%; gap: 0; }
+.session-detail { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; gap: 0; }
 .session-header { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; }
 .back-btn { color: var(--text-2); }
 .back-btn:hover { color: var(--brand-300); }
@@ -198,7 +198,7 @@ onMounted(async () => {
 .meta-item { display: flex; gap: 8px; align-items: center; }
 .meta-label { font-size: 12px; color: var(--text-3); }
 .meta-value { font-size: 12px; color: var(--text-1); font-family: "JetBrains Mono", monospace; }
-.thread { flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.thread { flex: 1; overflow-y: auto; min-height: 0; padding: 4px 0; }
 .entry-card {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -294,7 +294,7 @@ onMounted(async () => {
   overflow-y: auto;
 }
 .ts { font-size: 10px; color: var(--text-4); font-family: "JetBrains Mono", monospace; margin-left: auto; }
-.raw-pane { max-height: 76vh; overflow: auto; }
+.raw-pane { flex: 1; min-height: 0; overflow: auto; }
 .raw-content {
   margin: 0;
   padding: 16px;
@@ -308,6 +308,7 @@ onMounted(async () => {
   word-break: break-all;
   color: var(--text-2);
 }
+.thread > * + * { margin-top: 8px; }
 .empty-state { padding: 40px 20px; text-align: center; color: var(--text-4); }
 .empty-title { font-size: 14px; }
 </style>
