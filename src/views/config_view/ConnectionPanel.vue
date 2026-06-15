@@ -68,16 +68,22 @@
                   <a-col :span="12">
                     <a-form-item :label="t('config.form.model')" required>
                       <div style="display:flex;gap:6px">
-                        <a-select
+                        <a-auto-complete
                           v-model:value="item.model"
-                          show-search
-                          allow-clear
                           style="flex:1"
                           :options="modelOptions[key]"
                           :placeholder="t('config.form.model_select_placeholder')"
-                          @search="(val: string) => handleModelSearch(key, val)"
                           :filter-option="(input: string, option: any) => option.value?.toString().toLowerCase().includes(input.toLowerCase())"
-                        />
+                          backfill
+                        >
+                          <template #default>
+                            <a-input :placeholder="t('config.form.model_select_placeholder')" allow-clear>
+                              <template #suffix>
+                                <CaretDownOutlined style="font-size: 10px; color: var(--text-3); pointer-events: none;" />
+                              </template>
+                            </a-input>
+                          </template>
+                        </a-auto-complete>
                         <a-tooltip :title="t('config.form.fetch_models')">
                           <a-button size="small" :loading="fetchingModels[key]" @click="doFetchModels(key)">
                             <template #icon><ReloadOutlined /></template>
@@ -395,12 +401,6 @@ function onWireApiSelectChange(id: string, value: string) {
   if (m) {
     wirePresetKey[id] = m.key
     p.apiKeyHeader = m.values.apiKeyHeader
-  }
-}
-
-function handleModelSearch(id: string, value: string) {
-  if (value && value.trim() && !modelOptions[id]?.some((o) => o.value === value)) {
-    modelOptions[id] = [...(modelOptions[id] || []), { value: value.trim() }]
   }
 }
 
