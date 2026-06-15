@@ -1,10 +1,10 @@
-﻿<template>
+<template>
   <a-config-provider
     :theme="{
       algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
       token: {
-        colorPrimary: '#cccccc',
-        colorInfo: '#cccccc',
+        colorPrimary: '#4f7cff',
+        colorInfo: '#4f7cff',
         colorSuccess: '#34d399',
         colorWarning: '#fbbf24',
         colorError: '#f87171',
@@ -37,19 +37,31 @@
           itemSelectedColor: 'var(--text-1)',
         },
         Button: {
-          colorPrimaryHover: '#dddddd',
+          colorPrimaryHover: '#6b96ff',
+          defaultBg: 'transparent',
+          defaultColor: '#4f7cff',
+          defaultBorderColor: '#4f7cff',
+          defaultHoverBg: 'rgba(79,124,255,0.08)',
+          defaultHoverColor: '#6b96ff',
+          defaultHoverBorderColor: '#6b96ff',
+          dashedBg: 'transparent',
+          dashedColor: '#4f7cff',
+          dashedBorderColor: '#4f7cff',
+          dashedHoverBg: 'rgba(79,124,255,0.08)',
+          dashedHoverColor: '#6b96ff',
+          dashedHoverBorderColor: '#6b96ff',
         },
         Input: {
           colorBgContainer: 'rgba(255,255,255,0.04)',
           colorBorder: 'rgba(255,255,255,0.12)',
-          colorPrimaryHover: '#cccccc',
-          colorPrimaryActive: '#cccccc',
+          colorPrimaryHover: '#4f7cff',
+          colorPrimaryActive: '#4f7cff',
         },
         Select: {
           colorBgContainer: 'rgba(255,255,255,0.04)',
           colorBorder: 'rgba(255,255,255,0.12)',
-          colorPrimaryHover: '#cccccc',
-          colorPrimaryActive: '#cccccc',
+          colorPrimaryHover: '#4f7cff',
+          colorPrimaryActive: '#4f7cff',
         },
       },
     }"

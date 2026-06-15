@@ -198,12 +198,10 @@
        <template #icon><ApiOutlined /></template>
        {{ t("config.form.test") }}
      </a-button>
-      <a-config-provider :theme="{ token: { colorPrimary: '#4f7cff' } }">
-        <a-button type="primary" :loading="saving" :disabled="saving" @click="handleSave">
+      <a-button type="primary" :loading="saving" :disabled="saving" @click="handleSave">
           <template #icon><SaveOutlined /></template>
           {{ t("config.save") }}
         </a-button>
-      </a-config-provider>
     </div>
 
     <a-modal
@@ -682,12 +680,12 @@ onMounted(async () => {
 
 /* Save button: gray when disabled */
 .actions-bar :deep(.ant-btn-primary[disabled]) {
-  background: #5a5a5a !important;
-  border-color: #5a5a5a !important;
-  color: rgba(255,255,255,0.25) !important;
+  background: rgba(79,124,255,0.25) !important;
+  border-color: rgba(79,124,255,0.25) !important;
+  color: rgba(255,255,255,0.35) !important;
 }
 .actions-bar :deep(.ant-btn-primary[disabled]:hover) {
-  background: #5a5a5a !important;
-  border-color: #5a5a5a !important;
+  background: rgba(79,124,255,0.25) !important;
+  border-color: rgba(79,124,255,0.25) !important;
 }
 </style>
