@@ -1,4 +1,4 @@
-﻿export const en = {
+export const en = {
   // Sidebar
   "dashboard": "Dashboard",
   "configuration": "Configuration",
@@ -57,8 +57,9 @@
   "config.providers.ok": "Yes",
   "config.providers.cancel": "No",
   "config.providers.remove_confirm": "Remove {name}?",
-   "config.providers.placeholder": "LLM model provider",
+  "config.providers.placeholder": "LLM model provider",
   "config.providers.add": "Add",
+  "config.providers.add_title": "Add Model Provider",
   "config.providers.active": "Codex Active:",
   "config.wire_api": "Wire API",
   "config.wire_api.desc": "Choose the protocol. Model and Base URL are filled separately below.",

@@ -1,4 +1,4 @@
-﻿export const zh = {
+export const zh = {
   // Sidebar
   "dashboard": "仪表盘",
   "configuration": "配置",
@@ -53,12 +53,13 @@
   "config.title": "配置",
    "config.providers": "模型提供商",
   "config.providers.desc": "可添加任意数量的 Provider，激活的 Provider 供桥接服务使用。",
-  "config.providers.remove_title": "移除此 Provider？",
+  "config.providers.remove_title": "移除此模型提供者？",
   "config.providers.ok": "是",
   "config.providers.cancel": "否",
-  "config.providers.remove_confirm": "确定移除 {name}？",
+  "config.providers.remove_confirm": "确定移除模型提供者 {name}？",
    "config.providers.placeholder": "模型提供商英文/拼音",
   "config.providers.add": "添加",
+  "config.providers.add_title": "添加模型提供者",
   "config.providers.active": "Codex当前激活：",
   "config.wire_api": "Wire API",
   "config.wire_api.desc": "选择协议。Model 和 Base URL 在下方分别填写。",

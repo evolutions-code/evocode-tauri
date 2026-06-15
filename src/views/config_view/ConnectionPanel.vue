@@ -206,7 +206,7 @@
 
     <a-modal
       v-model:open="showAddModal"
-      :title="t('config.providers.add')"
+      :title="t('config.providers.add_title')"
       :ok-text="t('config.providers.ok')"
       :cancel-text="t('config.providers.cancel')"
       @ok="doAddProvider"
@@ -214,6 +214,7 @@
       <a-input
         v-model:value="newProviderName"
         :placeholder="t('config.providers.placeholder')"
+        @input="onProviderNameInput"
         @press-enter="doAddProvider"
       />
     </a-modal>
@@ -463,6 +464,10 @@ function onTabEdit(targetKey: string | MouseEvent, action: string) {
     removeTarget.value = targetKey as string
     showRemoveModal.value = true
   }
+}
+
+function onProviderNameInput() {
+  newProviderName.value = newProviderName.value.replace(/[^a-zA-Z0-9]/g, '')
 }
 
 function doAddProvider() {
