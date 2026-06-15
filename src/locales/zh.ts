@@ -64,7 +64,7 @@ export const zh = {
   "config.wire_api": "Wire API",
   "config.wire_api.desc": "选择协议。Model 和 Base URL 在下方分别填写。",
   "config.wire_api.tooltip": "上游 Provider 使用哪种 API 协议",
-  "config.form.title": "Provider 设置",
+  "config.form.title": "提供商 设置",
   "config.form.reset": "重置",
   "config.form.empty": "请在上方添加 Provider。",
   "config.form.test": "测试连接",
