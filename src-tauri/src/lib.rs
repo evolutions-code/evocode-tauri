@@ -103,6 +103,8 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
         ..Default::default()
     };
 
+    // Clear log file so each bridge start shows fresh logs
+    let _ = std::fs::write("target/logs/temp.log", "");
 
     let handle = tokio::spawn(async move {
         if let Err(e) = evocode_proto::serve(cfg).await {
@@ -1550,6 +1552,7 @@ pub fn run() {
     // Initialize tracing subscriber with file output
     let _ = tracing_subscriber::fmt()
         .with_timer(LocalTimer)
+        .with_ansi(false)
         .with_writer(move || {
             std::fs::OpenOptions::new()
                 .create(true)
