@@ -13,7 +13,7 @@
           {{ id }}
         </a-select-option>
       </a-select>
-      <a-button
+      <a-button danger type="primary"
         v-if="providerIds.length"
         size="small"
         :loading="syncing"
