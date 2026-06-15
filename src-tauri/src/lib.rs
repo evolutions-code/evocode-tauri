@@ -826,6 +826,22 @@ pub enum SessionEntry {
         last_message: String,
         duration_ms: u64,
     },
+    /// Context compaction event (context_compaction / compaction / compaction_summary).
+    Compaction {
+        timestamp: String,
+        text: String,
+    },
+    /// Execution approval request (user must approve a command).
+    Approval {
+        timestamp: String,
+        text: String,
+    },
+    /// File entry from `response_item:file`.
+    FileEntry {
+        timestamp: String,
+        path: String,
+        content: String,
+    },
 }
 
 #[derive(Serialize)]
@@ -1224,6 +1240,38 @@ fn parse_rollout_entries(content: &str) -> Vec<SessionEntry> {
                             duration_ms,
                         });
                     }
+                    "mcp_tool_call_end" => {
+                        let call_id = payload
+                            .and_then(|p| p.get("call_id"))
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let server = payload
+                            .and_then(|p| p.get("invocation"))
+                            .and_then(|p| p.get("server"))
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let tool_name = payload
+                            .and_then(|p| p.get("invocation"))
+                            .and_then(|p| p.get("tool"))
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let arg = payload
+                            .and_then(|p| p.get("invocation"))
+                            .and_then(|p| p.get("arguments"))
+                            .map(|v| v.to_string())
+                            .unwrap_or_default();
+                        let full_name = if server.is_empty() { tool_name } else { format!("{}/{}", server, tool_name) };
+                        out.push(SessionEntry::ToolCall {
+                            timestamp,
+                            tool_kind: "mcp".into(),
+                            name: full_name,
+                            call_id,
+                            arguments: arg,
+                        });
+                    }
                     // The rest (`task_started`, `token_count`,
                     // `thread_rolled_back`) is intentionally dropped.
                     _ => {}
@@ -1326,6 +1374,51 @@ fn parse_rollout_entries(content: &str) -> Vec<SessionEntry> {
                             truncated,
                         });
                     }
+                    "mcp_tool_call" => {
+                        let name = payload.and_then(|p| p.get("name")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let call_id = payload.and_then(|p| p.get("call_id")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let arguments = match payload.and_then(|p| p.get("input")) {
+                            Some(s) if s.is_string() => s.as_str().map(|s| s.to_string()).unwrap_or_default(),
+                            Some(v) => v.to_string(),
+                            None => String::new(),
+                        };
+                        out.push(SessionEntry::ToolCall { timestamp, tool_kind: "mcp".into(), name, call_id, arguments });
+                    },
+                    "tool_search_call" => parse_tool_call(payload, timestamp, &mut out, "tool_search"),
+                    "web_search_call" => {
+                        let action = payload.and_then(|p| p.get("action")).map(|v| v.to_string()).unwrap_or_default();
+                        let call_id = payload.and_then(|p| p.get("call_id")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        out.push(SessionEntry::ToolCall { timestamp, tool_kind: "web_search".into(), name: "web_search".into(), call_id, arguments: action });
+                    },
+                    "image_generation_call" => parse_tool_call(payload, timestamp, &mut out, "image_gen"),
+                    "local_shell_call" => {
+                        let cmd = payload.and_then(|p| p.get("command")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let call_id = payload.and_then(|p| p.get("call_id")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        out.push(SessionEntry::ToolCall { timestamp, tool_kind: "local_shell".into(), name: "local_shell".into(), call_id, arguments: cmd });
+                    },
+                    "tool_search_output" => parse_tool_output(payload, timestamp, &mut out),
+                    "mcp_tool_call_output" => parse_tool_output(payload, timestamp, &mut out),
+                    "compaction" | "compaction_summary" | "context_compaction" => {
+                        let text = payload.and_then(|p| p.get("summary")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        if !text.is_empty() {
+                            out.push(SessionEntry::Compaction { timestamp, text });
+                        }
+                    },
+                    "compaction_trigger" => {
+                        let text = payload.and_then(|p| p.get("reason")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        out.push(SessionEntry::Compaction { timestamp, text });
+                    },
+                    "exec_approval_request" => {
+                        let cmd = payload.and_then(|p| p.get("command")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let description = payload.and_then(|p| p.get("description")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let combined = if description.is_empty() { cmd } else { format!("{}: {}", description, cmd) };
+                        out.push(SessionEntry::Approval { timestamp, text: combined });
+                    },
+                    "file" => {
+                        let path_s = payload.and_then(|p| p.get("path")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let content = payload.and_then(|p| p.get("content")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        // path_s and content are stored in FileEntry
+                    },
                     // `response_item:reasoning` is intentionally skipped:
                     // the human-facing `event_msg:agent_reasoning` is
                     // already emitted above and the two carry the same
@@ -1345,6 +1438,40 @@ fn parse_rollout_entries(content: &str) -> Vec<SessionEntry> {
 /// Extract a short unified-diff snippet per touched file from
 /// `event_msg:patch_apply_end.changes`. We cap the per-file diff size so
 /// a 5 MB patch doesn't blow up the IPC payload.
+
+/// Helper: parse a generic tool_call response_item into a ToolCall entry.
+fn parse_tool_call(payload: Option<&serde_json::Value>, timestamp: String, out: &mut Vec<SessionEntry>, kind: &str) {
+    let Some(p) = payload else { return };
+    let name = p.get("name").and_then(|t| t.as_str()).unwrap_or("").to_string();
+    let call_id = p.get("call_id").and_then(|t| t.as_str()).unwrap_or("").to_string();
+    let arguments = match p.get("input") {
+        Some(s) if s.is_string() => s.as_str().map(|s| s.to_string()).unwrap_or_default(),
+        Some(v) => v.to_string(),
+        None => String::new(),
+    };
+    out.push(SessionEntry::ToolCall {
+        timestamp,
+        tool_kind: kind.to_string(),
+        name,
+        call_id,
+        arguments,
+    });
+}
+
+/// Helper: parse a generic tool_call_output response_item into a ToolOutput entry.
+fn parse_tool_output(payload: Option<&serde_json::Value>, timestamp: String, out: &mut Vec<SessionEntry>) {
+    let Some(p) = payload else { return };
+    let call_id = p.get("call_id").and_then(|t| t.as_str()).unwrap_or("").to_string();
+    let raw = p.get("output").and_then(|t| t.as_str()).unwrap_or("").to_string();
+    let (output, truncated) = truncate_chars(&raw, TOOL_OUTPUT_MAX_CHARS);
+    out.push(SessionEntry::ToolOutput {
+        timestamp,
+        call_id,
+        output,
+        truncated,
+    });
+}
+
 fn collect_patch_diffs(changes: Option<&serde_json::Value>) -> Vec<PatchFileDiff> {
     const DIFF_MAX_CHARS: usize = 2_000;
     let Some(obj) = changes.and_then(|c| c.as_object()) else {

@@ -108,7 +108,7 @@ export type SessionEntry =
   | {
       kind: "tool_call"
       timestamp: string
-      tool_kind: "function" | "custom"
+      tool_kind: "function" | "custom" | "mcp" | "web_search" | "tool_search" | "image_gen" | "local_shell"
       name: string
       call_id: string
       /** JSON-encoded arguments / input. The UI pretty-prints this. */
@@ -135,6 +135,22 @@ export type SessionEntry =
       timestamp: string
       last_message: string
       duration_ms: number
+    }
+  | {
+      kind: "compaction"
+      timestamp: string
+      text: string
+    }
+  | {
+      kind: "approval"
+      timestamp: string
+      text: string
+    }
+  | {
+      kind: "file_entry"
+      timestamp: string
+      path: string
+      content: string
     }
 
 export async function getSessions(offset: number, limit: number): Promise<SessionsResponse> {

@@ -181,6 +181,8 @@ export const zh = {
   "session.back": "返回",
   "session.model": "模型",
   "session.tokens": "Token",
+  "session.entries": "条目",
+  "session.total_tokens": "总 Tokens",
   "session.expand": "展开全部",
   "session.collapse": "收起全部",
   "session.empty": "暂无可读内容",

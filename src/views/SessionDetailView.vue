@@ -1,160 +1,74 @@
 <template>
   <div class="session-detail">
-    <section class="page-header">
-      <a-button type="text" class="back-btn" @click="router.back()">
-        <template #icon><LeftOutlined /></template>
-        {{ t("session.back") }}
-      </a-button>
-      <div class="page-title">
-        <span class="bar" />
-        <span :title="sessionTitle">{{ sessionTitle || t("session.detail") }}</span>
-      </div>
-      <div class="header-spacer" />
-      <a-segmented
-        v-model:value="viewMode"
-        :options="viewOptions"
-        size="small"
-      />
-    </section>
-
-    <section class="session-meta" v-if="sessionInfo">
-      <div class="meta-item">
-        <span class="meta-label">{{ t("session.model") }}</span>
-        <span class="meta-value">{{ sessionInfo.model }}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">{{ t("session.tokens") }}</span>
-        <span class="meta-value">{{ displayTokens(sessionInfo.used_tokens, sessionInfo.used) }} / {{ displayTokens(sessionInfo.total_tokens, sessionInfo.total) }}</span>
-      </div>
-      <div class="meta-item" v-if="entries.length">
-        <span class="meta-label">{{ t("session.entries") || "Entries" }}</span>
-        <span class="meta-value">{{ entries.length }}</span>
-      </div>
-    </section>
-
-    <!-- Chat / think thread view -->
-    <section v-if="viewMode === 'chat'" class="thread" v-loading="loading">
-      <template v-for="(item, idx) in zippedEntries" :key="idx">
-        <!-- User prompt -->
-        <div
-          v-if="item.kind === 'user'"
-          class="msg-row user"
-        >
-          <div class="bubble user-bubble">
-            <div class="bubble-meta">
-              <span class="role-tag user-tag">USER</span>
-              <span class="ts" v-if="item.timestamp">{{ formatTs(item.timestamp) }}</span>
-            </div>
-            <div class="bubble-body md" v-html="renderMarkdown(item.text)" />
-          </div>
+    <div class="session-header">
+      <section class="page-header">
+        <a-button type="text" class="back-btn" @click="goBack()">
+          <template #icon><LeftOutlined /></template>
+          {{ t("session.back") }}
+        </a-button>
+        <div class="page-title">
+          <span class="bar" />
+          <span :title="sessionTitle">{{ sessionTitle || t("session.detail") }}</span>
         </div>
+        <div class="header-spacer" />
+        <a-segmented
+          v-model:value="viewMode"
+          :options="viewOptions"
+          size="small"
+        />
+      </section>
 
-        <!-- Assistant text -->
-        <div
-          v-else-if="item.kind === 'assistant'"
-          class="msg-row assistant"
-        >
-          <div class="bubble assistant-bubble">
-            <div class="bubble-meta">
-              <span class="role-tag assistant-tag">ASSISTANT</span>
-              <span class="ts" v-if="item.timestamp">{{ formatTs(item.timestamp) }}</span>
-            </div>
-            <div class="bubble-body md" v-html="renderMarkdown(item.text)" />
-          </div>
+      <section class="session-meta" v-if="sessionInfo">
+        <div class="meta-item">
+          <span class="meta-label">{{ t("session.model") }}</span>
+          <span class="meta-value">{{ sessionInfo.model }}</span>
         </div>
-
-        <!-- Reasoning / thinking -->
-        <details
-          v-else-if="item.kind === 'reasoning'"
-          class="think-block"
-        >
-          <summary>
-            <span class="think-icon">💭</span>
-            <span class="think-label">思考</span>
-            <span class="think-preview">{{ truncate(item.text, 80) }}</span>
-            <span class="ts" v-if="item.timestamp">{{ formatTs(item.timestamp) }}</span>
-          </summary>
-          <div class="think-body md" v-html="renderMarkdown(item.text)" />
-        </details>
-
-        <!-- Tool call (function or custom) -->
-        <div
-          v-else-if="item.kind === 'tool_call'"
-          class="tool-card"
-          :class="{ expanded: expandedToolCalls.has(item.call_id) }"
-        >
-          <div class="tool-head" @click="toggleTool(item.call_id)">
-            <span class="tool-icon">{{ item.tool_kind === 'custom' ? '🛠' : '⚙' }}</span>
-            <span class="tool-kind" :class="`kind-${item.tool_kind}`">{{ item.tool_kind === 'custom' ? 'CUSTOM' : 'FN' }}</span>
-            <span class="tool-name">{{ item.name }}</span>
-            <span class="tool-callid" :title="item.call_id">{{ shortId(item.call_id) }}</span>
-            <span class="tool-chevron">{{ expandedToolCalls.has(item.call_id) ? '▾' : '▸' }}</span>
-            <span class="ts" v-if="item.timestamp">{{ formatTs(item.timestamp) }}</span>
-          </div>
-          <div v-if="expandedToolCalls.has(item.call_id)" class="tool-body">
-            <div v-if="formatToolArgs(item).length" class="tool-args">
-              <div class="tool-sublabel">arguments</div>
-              <pre><code>{{ formatToolArgs(item) }}</code></pre>
-            </div>
-            <div v-if="toolOutputs.has(item.call_id)" class="tool-output">
-              <div class="tool-sublabel">
-                output
-                <span v-if="getOutputTruncated(item.call_id)" class="truncated-tag">truncated</span>
-              </div>
-              <pre><code>{{ toolOutputs.get(item.call_id) }}</code></pre>
-            </div>
-            <div v-else class="tool-output tool-output-pending">
-              <div class="tool-sublabel">output</div>
-              <pre><code>⏳ waiting for tool result…</code></pre>
-            </div>
-          </div>
+        <div class="meta-item">
+          <span class="meta-label">{{ t("session.tokens") }}</span>
+          <span class="meta-value">{{ displayTokens(sessionInfo.used_tokens, sessionInfo.used) }} / {{ displayTokens(sessionInfo.total_tokens, sessionInfo.total) }}</span>
         </div>
-
-        <!-- Patch end (only emitted if there is no matching custom_tool_call_output) -->
-        <div
-          v-else-if="item.kind === 'patch_end'"
-          class="patch-card"
-          :class="{ ok: item.success, fail: !item.success }"
-        >
-          <div class="patch-head">
-            <span class="patch-icon">{{ item.success ? '✓' : '✗' }}</span>
-            <span class="patch-title">
-              {{ item.success ? 'apply_patch' : 'apply_patch failed' }}
-            </span>
-            <span class="ts" v-if="item.timestamp">{{ formatTs(item.timestamp) }}</span>
-          </div>
-          <div v-if="item.stdout" class="patch-stdout md"><code>{{ item.stdout.trim() }}</code></div>
-          <div v-if="item.stderr" class="patch-stderr md"><code>{{ item.stderr.trim() }}</code></div>
-          <details v-for="d in item.diffs" :key="d.path" class="patch-diff">
-            <summary>{{ d.path }}</summary>
-            <pre v-if="d.diff"><code>{{ d.diff }}</code></pre>
-            <div v-else class="diff-empty">no diff available</div>
-          </details>
+        <div class="meta-item" v-if="sessionInfo.accumulated">
+          <span class="meta-label">{{ t("session.total_tokens") }}</span>
+          <span class="meta-value">{{ formatTokens(sessionInfo.accumulated) }}</span>
         </div>
+        <div class="meta-item" v-if="entries.length">
+          <span class="meta-label">{{ t("session.entries") || "Entries" }}</span>
+          <span class="meta-value">{{ entries.length }}</span>
+        </div>
+      </section>
+    </div>
 
-        <!-- Turn boundary -->
-        <div v-else-if="item.kind === 'turn_boundary'" class="turn-boundary">
-          <span class="turn-line" />
-          <span class="turn-label">
-            turn · {{ (item.duration_ms / 1000).toFixed(1) }}s
-            <span v-if="item.last_message" class="turn-tail"> · {{ truncate(item.last_message, 60) }}</span>
-          </span>
-          <span class="turn-line" />
+    <section v-if="viewMode === 'chat'" class="thread">
+      <template v-for="(item, _idx) in zippedEntries" :key="_idx">
+        <div class="entry-card" :class="['entry-' + (item as any).kind, (item as any).kind === 'user' ? 'msg-right' : (item as any).kind === 'assistant' ? 'msg-left' : '']">
+          <div class="entry-head" @click="toggleTool((item as any).call_id || (item as any).kind)" style="cursor:pointer">
+            <span class="entry-kind" :class="'kind-' + (item as any).kind">{{ (item as any).kind }}</span>
+            <span class="entry-name" v-if="(item as any).name">{{ (item as any).name }}</span>
+            <span class="entry-callid" v-if="(item as any).call_id">{{ shortId((item as any).call_id) }}</span>
+            <span class="collapse-arrow">{{ expandedTools.has((item as any).call_id || (item as any).kind) ? '▾' : '▸' }}</span>
+            <span class="ts" v-if="(item as any).timestamp">{{ formatTs((item as any).timestamp) }}</span>
+          </div>
+          <div v-if="expandedTools.has((item as any).call_id || (item as any).kind) || (item as any).kind === 'user' || (item as any).kind === 'assistant'" class="entry-body">
+            <div v-if="(item as any).kind === 'user' || (item as any).kind === 'assistant'" class="md" v-html="renderMarkdown((item as any).text || '')" />
+            <div v-else-if="(item as any).kind === 'reasoning'" class="reasoning-text">{{ (item as any).text }}</div>
+            <pre v-else class="entry-json"><code>{{ formatEntry(item as any) }}</code></pre>
+          </div>
+          <div v-if="expandedTools.has((item as any).call_id || (item as any).kind) && (item as any).call_id && toolOutputs.has((item as any).call_id)" class="entry-output">
+            <div class="output-label">OUTPUT</div>
+            <pre><code class="output-content">{{ toolOutputs.get((item as any).call_id) }}</code></pre>
+          </div>
         </div>
       </template>
-
       <div v-if="!loading && entries.length === 0" class="empty-state">
-        No conversation entries in this session.
+        <div class="empty-title">No entries</div>
       </div>
     </section>
 
-    <!-- Raw fallback view -->
     <section v-else class="raw-pane">
       <pre class="raw-content">{{ rawContent }}</pre>
     </section>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
@@ -178,50 +92,40 @@ const viewOptions = [
   { label: "Chat", value: "chat" },
   { label: "Raw", value: "raw" },
 ]
-const expandedToolCalls = ref<Set<string>>(new Set())
 const rawContent = ref("")
+const expandedTools = ref<Set<string>>(new Set())
 
-// Prefer the exact token count from the backend; fall back to
-// cells * 10K for older builds that don't yet emit the precise fields.
+function goBack() {
+  router.back()
+}
+
+function toggleTool(id: string) {
+  const next = new Set(expandedTools.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expandedTools.value = next
+}
+
 function displayTokens(precise: number | undefined, cells: number | undefined): string {
   if (precise != null) return formatTokens(precise)
   if (cells == null) return "0"
   return formatTokens(cells * 10000)
 }
 
-// Pair every `tool_call` with the matching `tool_output` so the call card
-// can render the result inline. The Rust layer emits them in chronological
-// order, so a single forward pass is enough.
 const toolOutputs = computed(() => {
   const m = new Map<string, string>()
   for (const e of entries.value) {
-    if (e.kind === "tool_output") m.set(e.call_id, e.output)
+    if (e.kind === "tool_output") m.set((e as any).call_id, (e as any).output)
   }
   return m
 })
 
-function getOutputTruncated(callId: string): boolean {
-  for (const e of entries.value) {
-    if (e.kind === "tool_output" && e.call_id === callId) return e.truncated
-  }
-  return false
-}
-
-function toggleTool(callId: string) {
-  const next = new Set(expandedToolCalls.value)
-  if (next.has(callId)) next.delete(callId)
-  else next.add(callId)
-  // Force re-render of the Set
-  expandedToolCalls.value = next
-}
-
-// Mostly pass-through; just provide a stable key/value shape.
-const zippedEntries = computed(() => entries.value)
+const zippedEntries = computed(() =>
+  entries.value.filter(e => e.kind !== 'tool_output')
+)
 
 function formatTs(ts: string): string {
   if (!ts) return ""
-  // ISO timestamp → "HH:MM:SS" in local time. Compact enough for the meta
-  // line; the full date isn't useful inside one session.
   const d = new Date(ts)
   if (Number.isNaN(d.getTime())) return ts
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
@@ -232,49 +136,28 @@ function shortId(id: string): string {
   return id.length > 16 ? id.slice(0, 8) + "…" + id.slice(-4) : id
 }
 
-function truncate(s: string, n: number): string {
-  if (!s) return ""
-  return s.length > n ? s.slice(0, n) + "…" : s
-}
-
-function formatToolArgs(call: Extract<SessionEntry, { kind: "tool_call" }>): string {
-  if (!call.arguments) return ""
-  // Try to pretty-print JSON; if the payload isn't valid JSON, fall back
-  // to the raw text (this is how `apply_patch` shows up).
-  try {
-    return JSON.stringify(JSON.parse(call.arguments), null, 2)
-  } catch {
-    return call.arguments
+function formatEntry(item: any): string {
+  if (!item) return ""
+  var obj: any = {}
+  for (var k in item) {
+    if (k === "kind" || k === "timestamp") continue
+    var v = item[k]
+    if (k === "arguments" && typeof v === "string") {
+      try { v = JSON.parse(v) } catch(e) {}
+    }
+    obj[k] = v
   }
+  return JSON.stringify(obj, null, 2)
 }
 
-// Lightweight markdown rendering: just fenced code blocks + inline
-// `backticks` + paragraph breaks. We intentionally avoid pulling in a
-// full markdown lib for this view.
 function renderMarkdown(text: string): string {
   if (!text) return ""
-  const escape = (s: string) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
+  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
   let src = escape(text)
-  // Fenced code blocks ``` ... ```
-  src = src.replace(/```([\s\S]*?)```/g, (_, body) => {
-    return `<pre class="md-pre"><code>${body.replace(/^\n/, "").replace(/\n$/, "")}</code></pre>`
-  })
-  // Inline code `...`
+  src = src.replace(/```([\s\S]*?)```/g, (_, body) => `<pre class="md-pre"><code>${body.replace(/^\n/, "").replace(/\n$/, "")}</code></pre>`)
   src = src.replace(/`([^`\n]+)`/g, "<code class=\"md-code\">$1</code>")
-  // Bold **...**
   src = src.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
-  // Line breaks: blank line → new paragraph, single \n → <br>
-  src = src
-    .split(/\n{2,}/)
-    .map((p) => {
-      if (p.startsWith("<pre")) return p
-      return `<p>${p.replace(/\n/g, "<br>")}</p>`
-    })
-    .join("")
+  src = src.split(/\n{2,}/).map((p) => { if (p.startsWith("<pre")) return p; return `<p>${p.replace(/\n/g, "<br>")}</p>` }).join("")
   return src
 }
 
@@ -296,23 +179,15 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-  // Build the raw view lazily — it's only for the "Raw" toggle.
-  rawContent.value = entries.value
-    .map((e) => JSON.stringify(e))
-    .join("\n")
+  rawContent.value = entries.value.map((e) => JSON.stringify(e)).join("\n")
 })
 </script>
-
 <style scoped>
-.session-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+.session-detail { display: flex; flex-direction: column; height: 100%; gap: 0; }
+.session-header { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; }
 .back-btn { color: var(--text-2); }
 .back-btn:hover { color: var(--brand-300); }
 .header-spacer { flex: 1; }
-
 .session-meta {
   display: flex; gap: 24px; flex-wrap: wrap;
   padding: 12px 16px;
@@ -322,285 +197,103 @@ onMounted(async () => {
 }
 .meta-item { display: flex; gap: 8px; align-items: center; }
 .meta-label { font-size: 12px; color: var(--text-3); }
-.meta-value {
-  font-size: 12px; color: var(--text-1);
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-}
-
-/* ============ Chat / thread ============ */
-.thread {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 76vh;
-  overflow-y: auto;
-  padding: 12px 4px;
-}
-
-.msg-row {
-  display: flex;
-  width: 100%;
-}
-.msg-row.user { justify-content: flex-end; }
-.msg-row.assistant { justify-content: flex-start; }
-
-.bubble {
-  max-width: min(720px, 88%);
-  padding: 10px 14px;
-  border-radius: 12px;
+.meta-value { font-size: 12px; color: var(--text-1); font-family: "JetBrains Mono", monospace; }
+.thread { flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.entry-card {
   border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--bg-elev-2);
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-1);
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  max-width: 100%;
 }
-.user-bubble {
-  background: linear-gradient(180deg, rgba(128, 128, 128, 0.18), rgba(255,255,255,0.10));
-  border-color: rgba(255,255,255,0.30);
+.msg-right { align-self: flex-end; max-width: 85%; }
+.msg-left { align-self: flex-start; max-width: 85%; }
+.entry-card.entry-tool_call {
+  border-color: rgba(79, 124, 255, 0.3);
+  border-left: 3px solid #4f7cff;
 }
-.assistant-bubble {
-  background: var(--bg-elev-2);
-  border-color: var(--border);
+.entry-card.entry-reasoning {
+  border-color: rgba(251, 191, 36, 0.2);
+  border-left: 3px solid #fbbf24;
 }
-.bubble-meta {
+.entry-card.entry-turn_boundary {
+  border: none;
+  background: transparent;
+}
+.entry-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
-  color: var(--text-4);
-  margin-bottom: 4px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  padding: 5px 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
 }
-.role-tag {
+.entry-kind {
   display: inline-block;
-  padding: 1px 6px;
+  padding: 1px 8px;
   border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
-.user-tag { background: rgba(128, 128, 128, 0.18); color: #808080; }
-.assistant-tag { background: rgba(34, 211, 238, 0.18); color: #22d3ee; }
-.bubble-body { white-space: normal; }
-.bubble-body :deep(p) { margin: 4px 0; }
-.bubble-body :deep(.md-pre) {
-  background: rgba(0, 0, 0, 0.30);
+.kind-tool_call { background: rgba(79,124,255,0.2); color: #6b96ff; }
+.kind-reasoning { background: rgba(251,191,36,0.2); color: #fbbf24; }
+.kind-user { background: rgba(52,211,153,0.2); color: #34d399; }
+.kind-assistant { background: rgba(255,255,255,0.12); color: #f5f7fb; }
+.kind-turn_boundary { background: transparent; color: var(--text-4); font-weight: 400; }
+.kind-patch_end { background: rgba(236,72,153,0.2); color: #ec4899; }
+.entry-name { font-weight: 600; color: var(--text-1); }
+.entry-callid { color: var(--text-4); font-size: 10px; }
+.collapse-arrow { color: var(--text-4); font-size: 10px; }
+.entry-body { padding: 8px 10px; font-size: 12px; color: var(--text-2); }
+.entry-body :deep(p) { margin: 4px 0; }
+.reasoning-text { font-style: italic; color: var(--text-4); line-height: 1.5; white-space: pre-wrap; }
+.entry-json {
+  margin: 0;
+  background: rgba(0,0,0,0.25);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px 10px;
-  margin: 6px 0;
+  padding: 6px 8px;
   overflow-x: auto;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-.bubble-body :deep(.md-code) {
-  background: rgba(0, 0, 0, 0.20);
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-/* ============ Thinking ============ */
-.think-block {
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 0;
-  font-size: 12px;
-  color: var(--text-3);
-}
-.think-block summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 6px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  user-select: none;
-}
-.think-block summary::-webkit-details-marker { display: none; }
-.think-icon { font-size: 13px; }
-.think-label { font-weight: 600; color: var(--text-2); }
-.think-preview {
-  flex: 1;
-  color: var(--text-4);
-  font-style: italic;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
-}
-.think-body {
-  padding: 6px 14px 10px;
-  border-top: 1px dashed var(--border);
-  white-space: normal;
   color: var(--text-2);
-  font-size: 12px;
-  line-height: 1.55;
+  max-height: 400px;
+  overflow-y: auto;
 }
-.think-body :deep(p) { margin: 4px 0; }
-
-/* ============ Tool cards ============ */
-.tool-card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-elev-2);
-  font-size: 12px;
-  overflow: hidden;
-}
-.tool-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  cursor: pointer;
-  user-select: none;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-}
-.tool-head:hover { background: rgba(255, 255, 255, 0.02); }
-.tool-icon { font-size: 13px; }
-.tool-kind {
-  display: inline-block;
-  padding: 0 6px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.kind-function { background: rgba(128, 128, 128, 0.18); color: #808080; }
-.kind-custom { background: rgba(34, 211, 238, 0.18); color: #22d3ee; }
-.tool-name { font-weight: 600; color: var(--text-1); }
-.tool-callid { color: var(--text-4); font-size: 10px; }
-.tool-chevron { color: var(--text-3); }
-.tool-body {
+.entry-output {
   border-top: 1px solid var(--border);
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding: 6px 10px;
 }
-.tool-sublabel {
-  font-size: 10px;
+.output-label {
+  font-size: 9px;
   text-transform: uppercase;
   color: var(--text-4);
   letter-spacing: 0.06em;
   margin-bottom: 4px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  font-family: "JetBrains Mono", monospace;
 }
-.tool-args pre,
-.tool-output pre {
+.entry-output pre {
   margin: 0;
-  background: rgba(0, 0, 0, 0.30);
+  background: rgba(0,0,0,0.2);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   overflow-x: auto;
   white-space: pre-wrap;
-  word-break: break-word;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  font-size: 11.5px;
-  color: var(--text-1);
-  max-height: 360px;
+  word-break: break-all;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  max-height: 240px;
   overflow-y: auto;
 }
-.tool-output-pending pre { opacity: 0.5; font-style: italic; }
-.truncated-tag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 4px;
-  border-radius: 3px;
-  font-size: 9px;
-  background: rgba(255, 165, 0, 0.18);
-  color: #f59e0b;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-/* ============ Patch cards ============ */
-.patch-card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
-  background: var(--bg-elev-2);
-}
-.patch-card.ok { border-color: rgba(34, 197, 94, 0.30); }
-.patch-card.fail { border-color: rgba(239, 68, 68, 0.30); }
-.patch-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  font-weight: 600;
-}
-.patch-card.ok .patch-icon { color: #22c55e; }
-.patch-card.fail .patch-icon { color: #ef4444; }
-.patch-stdout, .patch-stderr {
-  margin-top: 4px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  font-size: 11.5px;
-  color: var(--text-2);
-  white-space: pre-wrap;
-}
-.patch-stderr { color: #fca5a5; }
-.patch-diff {
-  margin-top: 4px;
-  border-top: 1px dashed var(--border);
-  padding-top: 4px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  font-size: 11.5px;
-}
-.patch-diff summary {
-  cursor: pointer;
-  color: var(--text-2);
-  list-style: none;
-  padding: 2px 0;
-}
-.patch-diff summary::-webkit-details-marker { display: none; }
-.patch-diff pre {
-  margin: 4px 0 0;
-  background: rgba(0, 0, 0, 0.30);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  overflow-x: auto;
-  white-space: pre;
-  color: var(--text-1);
-}
-.diff-empty { color: var(--text-4); font-style: italic; padding: 2px 0; }
-
-/* ============ Turn boundary ============ */
-.turn-boundary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 6px 0;
-  color: var(--text-4);
-  font-size: 11px;
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-}
-.turn-line {
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.turn-label { white-space: nowrap; }
-.turn-tail { color: var(--text-3); }
-
-/* ============ Empty state ============ */
-.ts {
-  font-size: 10px;
-  color: var(--text-4);
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
-  margin-left: auto;
-}
-
-/* ============ Raw pane ============ */
+.ts { font-size: 10px; color: var(--text-4); font-family: "JetBrains Mono", monospace; margin-left: auto; }
 .raw-pane { max-height: 76vh; overflow: auto; }
 .raw-content {
   margin: 0;
@@ -608,11 +301,13 @@ onMounted(async () => {
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--text-2);
 }
+.empty-state { padding: 40px 20px; text-align: center; color: var(--text-4); }
+.empty-title { font-size: 14px; }
 </style>

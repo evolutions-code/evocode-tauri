@@ -181,6 +181,8 @@ export const en = {
   "session.back": "Back",
   "session.model": "Model",
   "session.tokens": "Tokens",
+  "session.entries": "Entries",
+  "session.total_tokens": "Total Tokens",
   "session.expand": "Expand All",
   "session.collapse": "Collapse All",
   "session.empty": "No readable content",
