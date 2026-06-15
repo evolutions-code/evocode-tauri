@@ -24,7 +24,7 @@
     </div>
 
     <div class="log-body" ref="bodyRef">
-      <div v-if="logLines.length === 0" class="empty">
+      <div v-if="logLines.length === 0" class="empty-state">
         <DatabaseOutlined class="empty-icon" />
         <div class="empty-title">{{ t("logs.empty_title") }}</div>
         <div class="empty-sub">{{ t("logs.empty_sub", { status: bridgeRunning ? t("logs.running") : t("logs.stopped") }) }}</div>
@@ -155,9 +155,6 @@ onUnmounted(stopPolling)
 .status-tag { margin-left: 4px; }
 
 .actions { display: inline-flex; align-items: center; gap: 8px; }
-.icon-btn { color: var(--text-3); width: 30px; height: 30px; border-radius: 8px; }
-.icon-btn:hover { color: var(--text-1); background: var(--bg-elev-3); }
-
 .log-body {
   flex: 1;
   overflow-y: auto;
@@ -167,14 +164,6 @@ onUnmounted(stopPolling)
   background: linear-gradient(180deg, var(--bg-elev-1), var(--bg-elev-2));
   padding: 6px 0;
 }
-
-.empty {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100%; color: var(--text-3); gap: 6px;
-}
-.empty-icon { font-size: 28px; color: var(--text-4); }
-.empty-title { font-size: 14px; color: var(--text-2); }
-.empty-sub { font-size: 12px; color: var(--text-4); }
 
 .log-line {
   display: flex; gap: 12px; padding: 1px 14px;

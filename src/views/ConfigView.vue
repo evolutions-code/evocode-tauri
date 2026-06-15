@@ -31,13 +31,6 @@ const activeKey = ref("provider")
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: 16px; flex-wrap: wrap;
 }
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 4px 10px; border-radius: 999px;
-  background: var(--bg-elev-3); color: var(--text-3); font-size: 12px; width: max-content;
-  border: 1px solid var(--border);
-}
-.eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--info); box-shadow: 0 0 8px var(--info); }
 .page-head h1 { font-size: 24px; font-weight: 700; color: var(--text-1); margin: 6px 0 2px; }
 .head-actions { display: flex; gap: 8px; }
 .ghost { background: var(--bg-elev-3); border-color: var(--border); color: var(--text-1); }

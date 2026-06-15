@@ -107,17 +107,6 @@ onMounted(async () => {
   border-radius: var(--r-xl);
 }
 .card-head { margin-bottom: 20px; }
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 4px 10px; border-radius: 999px;
-  background: var(--bg-elev-3);
-  color: var(--text-3); font-size: 12px; width: max-content;
-  border: 1px solid var(--border); margin-bottom: 10px;
-}
-.eyebrow .dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--ok); box-shadow: 0 0 8px var(--ok);
-}
 .card-desc {
   color: var(--text-3);
   font-size: 13px;

@@ -143,7 +143,7 @@
         </div>
       </template>
 
-      <div v-if="!loading && entries.length === 0" class="empty">
+      <div v-if="!loading && entries.length === 0" class="empty-state">
         No conversation entries in this session.
       </div>
     </section>
@@ -309,31 +309,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: 14px;
 }
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 .back-btn { color: var(--text-2); }
 .back-btn:hover { color: var(--brand-300); }
-.page-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text-1);
-  min-width: 0;
-}
-.page-title > span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.page-title .bar {
-  width: 3px; height: 16px; border-radius: 2px;
-  background: linear-gradient(180deg, var(--brand-400), var(--brand-700));
-}
 .header-spacer { flex: 1; }
 
 .session-meta {
@@ -616,13 +593,6 @@ onMounted(async () => {
 .turn-tail { color: var(--text-3); }
 
 /* ============ Empty state ============ */
-.empty {
-  text-align: center;
-  color: var(--text-4);
-  padding: 40px 20px;
-  font-size: 13px;
-}
-
 .ts {
   font-size: 10px;
   color: var(--text-4);

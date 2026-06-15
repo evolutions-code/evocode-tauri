@@ -374,13 +374,6 @@ onMounted(async () => {
 .crumbs :deep(a) { color: var(--text-2); }
 .crumbs :deep(a:hover) { color: var(--brand-300); }
 
-.icon-btn {
-  color: var(--text-2);
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-}
-.icon-btn:hover { color: var(--text-1); background: var(--bg-elev-3); }
 .lang-btn { font-weight: 600; font-size: 13px; letter-spacing: 0.5px; width: auto; padding: 0 8px; }
 
 .app-content {

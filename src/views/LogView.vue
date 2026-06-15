@@ -42,23 +42,4 @@ onMounted(async () => {
   flex-direction: column;
   min-height: 0;
 }
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.page-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text-1);
-}
-.page-title .bar {
-  width: 3px;
-  height: 16px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, var(--brand-400), var(--brand-700));
-}
 </style>
