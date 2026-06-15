@@ -4,7 +4,7 @@ mod fetchers;
 
 use serde::Serialize;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use evocode_config::load_config;
 use evocode_proto::ServerConfig;
@@ -39,13 +39,6 @@ impl BridgeState {
     fn set_port(&self, port: u16) {
         self.port.store(port, std::sync::atomic::Ordering::Relaxed);
     }
-}
-
-fn home_dir() -> PathBuf {
-    std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(PathBuf::from)
-        .expect("Cannot find home directory")
 }
 
 fn get_config_path() -> Option<PathBuf> {
@@ -178,9 +171,10 @@ async fn set_bridge_port(state: State<'_, BridgeState>, port: u16) -> Result<(),
 
 #[tauri::command]
 async fn get_bridge_logs() -> Result<Vec<String>, String> {
-    let log_path = home_dir().join(".evocode").join("logs").join("temp.log");
-    let content = std::fs::read_to_string(&log_path).unwrap_or_default();
-    Ok(content.lines().map(|l| l.to_string()).collect())
+    let log_path = PathBuf::from("target/logs/temp.log");
+    let bytes = std::fs::read(&log_path).unwrap_or_default();
+    let text = String::from_utf8_lossy(&bytes);
+    Ok(text.lines().map(|l| l.to_string()).collect())
 }
 
 #[tauri::command]
@@ -1546,23 +1540,29 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Init fast_log once at startup
-    let log_dir = "target/logs/".to_string();
+    // Init tracing-based logging to target/logs/temp.log
+    let log_dir = "target/logs/";
     println!("Logging to {}", log_dir);
-    let _ = std::fs::create_dir_all(&log_dir);
-    use fast_log::config::Config;
-    use fast_log::plugin::file_split::{RollingType, KeepType, DateType, Rolling};
-    use fast_log::plugin::packer::LogPacker;
-    let _ = fast_log::init(
-        Config::new()
-            .chan_len(Some(100000))
-            .file_split(
-                &log_dir,
-                Rolling::new(RollingType::ByDate(DateType::Day)),
-                KeepType::KeepNum(2),
-                LogPacker{},
-            )
-    );
+    let _ = std::fs::create_dir_all(log_dir);
+    let log_path = std::path::PathBuf::from("target/logs/temp.log");
+    // Remove old log file before this run
+    let _ = std::fs::remove_file(&log_path);
+    // Initialize tracing subscriber with file output
+    let _ = tracing_subscriber::fmt()
+        .with_timer(LocalTimer)
+        .with_writer(move || {
+            std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_path)
+                .expect("failed to open log file")
+        })
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::builder()
+                .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
+                .from_env_lossy()
+        )
+        .try_init();
     let mut builder = tauri::Builder::default();
 
     #[cfg(desktop)]
