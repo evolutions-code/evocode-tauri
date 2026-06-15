@@ -9,6 +9,8 @@
             {{ t("config.providers.add") }}
           </a-button>
         </div>
+      </div>
+
         <div class="active-with-sync">
           <a-tag v-if="activeId" class="active-tag">{{ t("config.providers.active") }} {{ activeId }}</a-tag>
           <a-select
@@ -27,12 +29,10 @@
             size="small"
             :loading="syncing"
             @click="handleSyncToCodex(activeId)">
-            <template #icon><SyncOutlined /></template>
+            同步
           </a-button>
           <a-tag v-else style="font-weight: 400;">{{ t("config.sync.no_providers") }}</a-tag>
         </div>
-      </div>
-
       <a-tabs
         v-if="providerIds.length"
         type="editable-card"
@@ -224,7 +224,7 @@ import { ref, reactive, onMounted, onUnmounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
 import { writeConfig, syncToCodex, readConfig, testProviderConnectivity, fetchModels as fetchModelsApi } from "../../api/bridge"
 import { message } from "ant-design-vue"
-import { PlusOutlined, ReloadOutlined, ApiOutlined, InfoCircleOutlined, SaveOutlined, SyncOutlined } from "@ant-design/icons-vue"
+import { PlusOutlined, ReloadOutlined, ApiOutlined, InfoCircleOutlined, SaveOutlined } from "@ant-design/icons-vue"
 
 const { t } = useLocale()
 
