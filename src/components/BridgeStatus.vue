@@ -1,5 +1,5 @@
 <template>
-  <div class="bridge-card glass fade-up">
+  <div class="bridge-card glass fade-up" v-if="ready">
     <div class="ring" :class="status">
       <span class="core" />
       <span class="pulse" />
@@ -16,7 +16,7 @@
     </div>
     <div class="url mono">
       <span class="url-label">{{ t("bridge.url") }}</span>
-      <code>http://127.0.0.1:17761</code>
+      <code>http://127.0.0.1:{{ port }}</code>
       <a-tooltip :title="t('bridge.copy')">
         <CopyOutlined class="copy" @click="copyUrl" />
       </a-tooltip>
@@ -50,11 +50,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLocale } from '../composables/useLocale'
+import { getBridgePort } from '../api/bridge'
 import { PoweroffOutlined, PauseOutlined, CopyOutlined, CodeOutlined } from '@ant-design/icons-vue'
 
+const port = ref(17761)
+const ready = ref(false)
 const { t } = useLocale()
 const router = useRouter()
 
@@ -78,12 +81,17 @@ const statusLabel = computed(() => {
 })
 
 function copyUrl() {
-  navigator.clipboard?.writeText('http://127.0.0.1:17761').catch(() => {})
+  navigator.clipboard?.writeText('http://127.0.0.1:' + port.value).catch(() => {})
 }
 
 function goToLogs() {
   router.push('/logs')
 }
+
+onMounted(async () => {
+  try { port.value = await getBridgePort() } catch { /* keep default 17761 */ }
+  ready.value = true
+})
 </script>
 
 <style scoped>

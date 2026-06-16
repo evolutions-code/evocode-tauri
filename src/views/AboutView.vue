@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="about-view">
     <!-- About evocode -->
     <section class="card glass fade-up">
@@ -34,7 +34,7 @@
       <div class="tech-row">
         <div class="tech-item">
           <span class="tech-label">{{ t("about.port") }}</span>
-          <code class="tech-value mono">17761</code>
+          <code class="tech-value mono">{{ bridgePort }}</code>
         </div>
         <div class="tech-sep" />
         <div class="tech-item">
@@ -81,14 +81,18 @@
 import { ref, onMounted } from "vue"
 import { TeamOutlined, ApiOutlined, CheckCircleOutlined, MailOutlined, GithubOutlined } from "@ant-design/icons-vue"
 import { useLocale } from "../composables/useLocale"
-import { getAppVersion } from "../api/bridge"
+import { getAppVersion, getBridgePort } from "../api/bridge"
 
 const { t } = useLocale()
 const currentVersion = ref("")
+const bridgePort = ref("17761")
 
 onMounted(async () => {
   try {
     currentVersion.value = await getAppVersion()
+  } catch {}
+  try {
+    bridgePort.value = String(await getBridgePort())
   } catch {}
 })
 </script>
