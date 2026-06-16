@@ -9,6 +9,7 @@
       class="app-sider"
     >
       <div class="brand" :class="{ collapsed }">
+        <img :src="logo" alt="evocode logo" class="brand-logo" />
         <transition name="brand-fade">
           <span v-if="!collapsed" class="brand-text gradient-text">evocode</span>
         </transition>
@@ -123,6 +124,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import logo from '../assets/logo.png'
 import {
   HomeOutlined,
   SettingOutlined,
@@ -255,17 +257,14 @@ onMounted(async () => {
 }
 .brand.collapsed { padding: 18px 0 16px; justify-content: center; }
 
-.logo {
+.brand-logo {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: #666666;
-  color: #fff;
-  font-size: 16px;
-  box-shadow: var(--shadow-glow);
+  display: block;
+  object-fit: cover;
   flex-shrink: 0;
+  box-shadow: var(--shadow-glow);
 }
 
 .brand-text {
@@ -430,9 +429,6 @@ onMounted(async () => {
 .update-modal :deep(.ant-modal-header) {
   text-align: center;
 }
-
-
-
 
 
 
