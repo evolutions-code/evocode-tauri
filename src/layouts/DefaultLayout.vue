@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <a-layout class="app-shell">
     <a-layout-sider
       v-model:collapsed="collapsed"
@@ -381,7 +381,8 @@ onMounted(async () => {
   height: calc(100vh - var(--header-h));
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .content-inner {
   max-width: 1080px;
@@ -391,7 +392,7 @@ onMounted(async () => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  
 }
 
 @media (max-width: 720px) {
