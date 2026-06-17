@@ -6,7 +6,6 @@
         v-if="providerIds.length"
         v-model:value="activeId"
         style="width: 240px;"
-        size="small"
         :loading="syncing"
         @change="handleSyncToCodex">
         <a-select-option v-for="id in providerIds" :key="id" :value="id">
@@ -15,7 +14,6 @@
       </a-select>
      <a-button danger type="primary"
        v-if="providerIds.length"
-       size="small"
        :loading="syncing"
        @click="handleSyncToCodex(activeId)">
        <template #icon><SyncOutlined /></template>
@@ -42,7 +40,6 @@
         @change="onTabChange"
         @edit="onTabEdit"
         class="prov-tabs"
-        size="small"
         destroyInactiveTabPane
       >
         <a-tab-pane
@@ -634,7 +631,18 @@ onMounted(async () => {
 .panel-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
 .panel-sub { font-size: 12.5px; margin-top: 2px; }
 .active-tag { border-radius: 999px; }
-.active-with-sync { display: inline-flex; align-items: center; gap: 6px; }
+.active-with-sync { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.active-with-sync .active-tag {
+  height: 32px;
+  line-height: 30px;
+  font-size: 13px;
+}
+.active-with-sync .ant-select {
+  height: 32px;
+}
+.active-with-sync .ant-btn {
+  height: 32px;
+}
 .head-actions { display: inline-flex; gap: 8px; align-items: center; }
 .empty-block { padding: 24px 0; }
 .conn-alert { margin-bottom: 16px; }
