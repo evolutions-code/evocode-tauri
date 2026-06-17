@@ -60,6 +60,7 @@ export interface ProviderConfig {
   api_key_header?: string
   model_context_window?: number
   model_auto_compact_token_limit?: number
+  input_modalities?: string[]
 }
 
 export interface EvocodeConfig {
@@ -217,4 +218,17 @@ export async function getSessions(offset: number, limit: number): Promise<Sessio
 
 export async function getSessionContent(id: string): Promise<SessionEntry[]> {
   return invoke<SessionEntry[]>('get_session_content', { id })
+}
+
+export interface CatalogModel {
+  slug: string
+  input_modalities: string[]
+}
+
+export interface ModelsCatalog {
+  models: CatalogModel[]
+}
+
+export async function getModelCatalog(): Promise<ModelsCatalog> {
+  return invoke<ModelsCatalog>('get_model_catalog')
 }

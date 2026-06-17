@@ -113,6 +113,18 @@
                     </a-form-item>
                   </a-col>
                 </a-row>
+                <a-row :gutter="16">
+                  <a-col :span="12">
+                    <a-form-item :label="t('config.form.model_type')">
+                      <a-select mode="multiple" :value="getModalityValue(key)" style="width: 100%;" @change="(val: string[]) => setModalityValue(key, val)" :placeholder="t('config.form.model_type')">
+                        <a-select-option value="text">{{ t("config.form.model_type_text") }}</a-select-option>
+                        <a-select-option value="image">{{ t("config.form.model_type_image") }}</a-select-option>
+                      </a-select>
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="12">
+                  </a-col>
+                </a-row>
                 
 <a-row :gutter="16">
                   <a-col :span="12">
@@ -251,6 +263,7 @@ interface Provider {
   apiKeyHeader: string
   modelContextWindow: number
   modelAutoCompactLimit: number
+  inputModalities: string[]
 }
 
 const CONTEXT_MIN = 16_000
@@ -287,6 +300,18 @@ const connResult = ref<null | { ok: boolean; status: number; latency_ms: number;
 
 const modelOptions = reactive<Record<string, { value: string }[]>>({})
 const fetchingModels = reactive<Record<string, boolean>>({})
+
+function getModalityValue(key: string): string[] {
+  const p = providers[key]
+  if (!p) return ['text']
+  return p.inputModalities || ['text']
+}
+
+function setModalityValue(key: string, val: string[]) {
+  const p = providers[key]
+  if (!p) return
+  p.inputModalities = val.length > 0 ? val : ['text']
+}
 
 // Per-provider slider rail refs
 const ctxRails = reactive<Record<string, HTMLElement | null>>({})
@@ -480,7 +505,7 @@ function doAddProvider() {
   if (!providers[name]) {
     providers[name] = {
       wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key",
-      modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT,
+      modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT, inputModalities: ["text"]
     }
   }
   if (!wirePresetKey[name]) wirePresetKey[name] = "anthropic"
@@ -530,7 +555,7 @@ function parseConfig(text: string) {
     else if (t.startsWith("[providers.")) {
       cur = t.replace("[providers.", "").replace("]", ""); inProv = true
       if (!providerIds.value.includes(cur)) providerIds.value.push(cur)
-      if (!providers[cur]) providers[cur] = { wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT }
+      if (!providers[cur]) providers[cur] = { wireApi: "anthropic", baseUrl: "", model: "", apiKey: "", apiKeyHeader: "X-Api-Key", modelContextWindow: DEFAULT_CONTEXT_WINDOW, modelAutoCompactLimit: DEFAULT_COMPACT_LIMIT, inputModalities: ["text"] }
     } else if (t.startsWith("[")) { inProv = false }
     else if (inProv) {
       const p = providers[cur]; if (!p) continue
@@ -541,6 +566,7 @@ function parseConfig(text: string) {
       else if (t.startsWith("api_key_header = ")) p.apiKeyHeader = t.replace("api_key_header = ", "").replace(/"/g, "")
       else if (t.startsWith("model_context_window = ")) { const v = parseInt(t.replace("model_context_window = ", "")); if (!isNaN(v)) p.modelContextWindow = v }
       else if (t.startsWith("model_auto_compact_token_limit = ")) { const v = parseInt(t.replace("model_auto_compact_token_limit = ", "")); if (!isNaN(v)) p.modelAutoCompactLimit = v }
+      else if (t.startsWith("input_modalities = ")) { try { p.inputModalities = JSON.parse(t.replace("input_modalities = ", "")) } catch {} }
     }
   }
 
@@ -577,7 +603,8 @@ async function handleSave() {
         api_key: p.apiKey,
         api_key_header: p.apiKeyHeader,
         model_context_window: p.modelContextWindow || DEFAULT_CONTEXT_WINDOW,
-        model_auto_compact_token_limit: p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT
+        model_auto_compact_token_limit: p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT,
+        input_modalities: p.inputModalities || ["text"]
       }
     }
     await saveConfig({ provider: activeId.value, providers: provs })
@@ -603,7 +630,8 @@ async function handleSyncToCodex(providerId: string) {
         api_key: p.apiKey,
         api_key_header: p.apiKeyHeader,
         model_context_window: p.modelContextWindow || DEFAULT_CONTEXT_WINDOW,
-        model_auto_compact_token_limit: p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT
+        model_auto_compact_token_limit: p.modelAutoCompactLimit || DEFAULT_COMPACT_LIMIT,
+        input_modalities: p.inputModalities || ["text"]
       }
     }
     await saveConfig({ provider: activeId.value, providers: provs })
