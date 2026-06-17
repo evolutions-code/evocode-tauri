@@ -1,6 +1,6 @@
 [package]
 name = "evocode-tauri"
-version = "0.1.30"
+version = "0.1.31"
 edition = "2024"
 
 [lib]
@@ -35,8 +35,8 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "chrono", "local-time"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
-evocode-proto = { path = "../../evocode/evocode-proto" }
-evocode-config = { path = "../../evocode/evocode-config" }
+evocode-proto = { git = "https://github.com/evolutions-code/evocode.git", package = "evocode-proto" }
+evocode-config = { git = "https://github.com/evolutions-code/evocode.git", package = "evocode-config" }
 dirs = "6"
 toml = "0.9"
 reqwest = {version = "0.13", features = ["json"] }
