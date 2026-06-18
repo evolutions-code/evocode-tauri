@@ -103,35 +103,41 @@
               <div v-if="!(item.models || []).length" style="padding:8px 0;">
                 <div class="muted-3" style="font-size:13px;">{{ t("config.no_models") }}</div>
               </div>
-              <div v-for="(model, mi) in item.models || []" :key="mi" class="model-card" style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                  <a-input v-model:value="model.name" size="small" style="font-size:13px;font-weight:600;width:auto;min-width:100px;flex:1;" :placeholder="t('config.model_name_placeholder')" />
-                  <a-button size="small" danger type="text" @click="removeModel(key, mi)" style="padding:0 4px;min-width:20px;height:20px;">&times;</a-button>
+              <div v-for="(model, mi) in item.models || []" :key="mi" class="model-card">
+                <div class="model-card-header">
+                  <a-input v-model:value="model.name" class="model-name-input" :placeholder="t('config.model_name_placeholder')" />
+                  <a-button size="small" danger type="text" @click="removeModel(key, mi)" class="model-remove-btn">&times;</a-button>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
-                      <span>{{ t("config.context") }}</span>
-                      <span>{{ contextLabel(model.contextWindow || 256000) }}</span>
+                <div class="model-card-body">
+                  <div class="model-slider-section">
+                    <div class="slider-label-row">
+                      <div class="slider-label-group">
+                        <span class="slider-label">{{ t("config.context") }}</span>
+                        <div class="preset-row-inline">
+                          <a-button v-for="p in LIMIT_PRESETS" :key="p.key" size="small" :type="(model.contextWindow || 256000) === p.context ? 'primary' : 'default'" @click="model.contextWindow = p.context" class="preset-btn">{{ contextLabel(p.context) }}</a-button>
+                        </div>
+                      </div>
+                      <span class="slider-value-label">{{ contextLabel(model.contextWindow || 256000) }}</span>
                     </div>
-                    <a-slider :min="16000" :max="10000000" :step="1000" :value="model.contextWindow || 256000" @change="(v: number) => { model.contextWindow = v }" style="margin:0 4px;" />
-                    <div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap;">
-                      <a-button v-for="p in LIMIT_PRESETS" :key="p.key" size="small" :type="(model.contextWindow || 256000) === p.context ? 'primary' : 'default'" @click="model.contextWindow = p.context" style="font-size:10px;height:20px;padding:0 6px;">{{ contextLabel(p.context) }}</a-button>
-                    </div>
+                    <a-slider :min="16000" :max="10000000" :step="1000" :value="model.contextWindow || 256000" @change="(v: number) => { model.contextWindow = v }" class="model-slider" />
                   </div>
-                  <div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
-                      <span>{{ t("config.compact") }}</span>
-                      <span>{{ contextLabel(model.autoCompactTokenLimit) }}</span>
+                  <div class="model-slider-section">
+                    <div class="slider-label-row">
+                      <div class="slider-label-group">
+                        <span class="slider-label">{{ t("config.compact") }}</span>
+                        <div class="preset-row-inline">
+                          <a-button v-for="pct in [50, 60, 70, 80, 90, 95]" :key="pct" size="small" :type="Math.round((model.autoCompactTokenLimit || Math.round((model.contextWindow || 256000) * 0.8)) / (model.contextWindow || 256000) * 100) === pct ? 'primary' : 'default'" @click="model.autoCompactTokenLimit = Math.round((model.contextWindow || 256000) * pct / 100)" class="preset-btn">{{ pct }}%</a-button>
+                        </div>
+                      </div>
+                      <span class="slider-value-label">{{ contextLabel(model.autoCompactTokenLimit) }}</span>
                     </div>
-                    <a-slider :min="16000" :max="model.contextWindow || 10000000" :step="1000" :value="model.autoCompactTokenLimit || Math.round((model.contextWindow || 256000) * 0.8)" @change="(v: number) => { model.autoCompactTokenLimit = v }" style="margin:0 4px;" />
-                    <div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap;">
-                      <a-button v-for="pct in [50, 60, 70, 80, 90, 95]" :key="pct" size="small" :type="Math.round((model.autoCompactTokenLimit || Math.round((model.contextWindow || 256000) * 0.8)) / (model.contextWindow || 256000) * 100) === pct ? 'primary' : 'default'" @click="model.autoCompactTokenLimit = Math.round((model.contextWindow || 256000) * pct / 100)" style="font-size:10px;height:20px;padding:0 6px;">{{ pct }}%</a-button>
-                    </div>
+                    <a-slider :min="16000" :max="model.contextWindow || 10000000" :step="1000" :value="model.autoCompactTokenLimit || Math.round((model.contextWindow || 256000) * 0.8)" @change="(v: number) => { model.autoCompactTokenLimit = v }" class="model-slider" />
                   </div>
-                  <div>
-                    <div style="font-size:11px;margin-bottom:2px;">{{ t("config.modalities") }}</div>
-                    <a-select mode="multiple" :value="model.inputModalities || ['text']" size="small" style="width:100%;"
+                  <div class="model-slider-section">
+                    <div class="slider-label-row">
+                      <span class="slider-label">{{ t("config.modalities") }}</span>
+                    </div>
+                    <a-select mode="multiple" :value="model.inputModalities || ['text']" size="small" class="modality-select"
                       @change="(val: string[]) => { model.inputModalities = val.length ? val : ['text']; }">
                       <a-select-option value="text">{{ t("config.modality_text") }}</a-select-option>
                       <a-select-option value="image">{{ t("config.modality_image") }}</a-select-option>
@@ -621,5 +627,96 @@ onMounted(async () => {
 .actions-bar :deep(.ant-btn-primary[disabled]:hover) {
   background: rgba(79,124,255,0.25) !important;
   border-color: rgba(79,124,255,0.25) !important;
+}
+/* ---- Model Card Styles ---- */
+.model-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: var(--bg-elev-1);
+  transition: border-color 0.2s;
+}
+.model-card:hover {
+  border-color: var(--border-strong);
+}
+.model-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.model-name-input {
+  flex: 1;
+}
+.model-name-input :deep(.ant-input) {
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+.model-remove-btn {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.model-remove-btn:hover {
+  opacity: 1;
+}
+.model-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.model-slider-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.slider-label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.preset-row-inline {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.slider-label {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+.slider-value-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.model-slider {
+  margin: 0 2px;
+}
+.preset-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.preset-btn {
+  font-size: 11px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+}
+.modality-select {
+  width: 100%;
 }
 </style>
