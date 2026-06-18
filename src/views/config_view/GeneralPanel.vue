@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="general-panel">
     <div class="setting-row">
       <div class="setting-meta">
@@ -59,15 +59,13 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { useLocale } from "../../composables/useLocale"
 import { message } from "ant-design-vue"
 import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart"
-import { openConfigDir as openConfigDirApi, getBridgePort, setBridgePort, setMaxRequestBodySize, readConfig } from "../../api/bridge"
+import { openConfigDir as openConfigDirApi, getBridgePort, setBridgePort, setMaxRequestBodySize, readConfigJson } from "../../api/bridge"
 import { FolderOpenOutlined } from "@ant-design/icons-vue"
-
 const { t } = useLocale()
 const autostartEnabled = ref(false)
 const autostartLoading = ref(false)
@@ -77,23 +75,19 @@ const bridgePort = ref(17761)
 const portLoading = ref(false)
 const maxBodySizeMB = ref<number>(1024)
 const bodySizeLoading = ref(false)
-
 onMounted(() => {
   buildConfigDirHint()
   loadAutostartStatus()
   loadPort()
   loadMaxBodySize()
 })
-
 function buildConfigDirHint() {
   const sep = navigator?.platform?.toLowerCase().includes("win") ? "\\" : "/"
   configDirHint.value = "~" + sep + ".evocode" + sep + "config.toml"
 }
-
 async function loadAutostartStatus() {
   try { autostartEnabled.value = await isEnabled() } catch { autostartEnabled.value = false }
 }
-
 async function onAutostartChange(checked: boolean) {
   autostartLoading.value = true
   try {
@@ -103,11 +97,9 @@ async function onAutostartChange(checked: boolean) {
   } catch (e: any) { message.error(t("config.autostart.error") + ": " + (e?.message || String(e)), 4) }
   finally { autostartLoading.value = false }
 }
-
 async function loadPort() {
   try { bridgePort.value = await getBridgePort() } catch { bridgePort.value = 17761 }
 }
-
 async function savePort() {
   const port = bridgePort.value
   if (port < 1024 || port > 65535) {
@@ -130,23 +122,14 @@ async function savePort() {
     portLoading.value = false
   }
 }
-
 async function loadMaxBodySize() {
   try {
-    const toml = await readConfig()
-    const m = toml.match(/^max_request_body_size\s*=\s*(\d+)/m)
-    if (m) {
-      const bytes = parseInt(m[1], 10)
-      maxBodySizeMB.value = bytes > 0 ? Math.round(bytes / 1048576) : 0
-    } else {
-      // not set ? default 1024 MB
-      maxBodySizeMB.value = 1024
-    }
+    const json = await readConfigJson()
+    maxBodySizeMB.value = json.max_request_body_size ? Math.round(json.max_request_body_size / 1048576) : 1024
   } catch {
     maxBodySizeMB.value = 1024
   }
 }
-
 async function saveMaxBodySize() {
   const mb = maxBodySizeMB.value
   // Convert MB ? bytes: null means None (use server default 1 GB)
@@ -161,7 +144,6 @@ async function saveMaxBodySize() {
     bodySizeLoading.value = false
   }
 }
-
 async function openConfigDir() {
   openingDir.value = true
   try { const path = await openConfigDirApi(); message.success(t("config.configdir.opened") + ": " + path, 3) }
@@ -169,7 +151,6 @@ async function openConfigDir() {
   finally { openingDir.value = false }
 }
 </script>
-
 <style scoped>
 .general-panel { display: flex; flex-direction: column; gap: 4px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 4px; }

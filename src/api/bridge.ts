@@ -47,30 +47,35 @@ export async function readConfig(): Promise<string> {
   return invoke<string>('read_config')
 }
 
+export async function readConfigJson(): Promise<EvocodeConfig> {
+  return invoke<EvocodeConfig>("read_config_json")
+}
+
+
 export async function writeConfig(content: string): Promise<void> {
   return invoke<void>('write_config', { content })
 }
+export interface ModelEntry {
+  name: string
+  context_window?: number | null
+  auto_compact_token_limit?: number | null
+  input_modalities?: string[]
+}
+
 export interface ProviderConfig {
   base_url?: string
   wire_api?: string
-  model?: string
-  models?: string[]
+  models?: ModelEntry[]
   api_key?: string
   api_key_env?: string
   api_key_header?: string
-  model_context_window?: number
-  model_auto_compact_token_limit?: number
-  input_modalities?: string[]
 }
 
 export interface EvocodeConfig {
   port?: number
   max_request_body_size?: number | null
   provider?: string
-  base_url?: string
-  api_key?: string
-  api_key_env?: string
-  protocol?: string
+  model?: string
   max_tokens?: number
   providers?: Record<string, ProviderConfig>
 }
@@ -86,6 +91,7 @@ export interface LogRangeResult {
 }
 
 export async function saveConfig(config: EvocodeConfig): Promise<void> {
+  console.log("[evocode] saveConfig: config =", JSON.stringify(config, (_, v) => v === undefined ? undefined : v))
   return invoke<void>('save_config', { config })
 }
 
@@ -231,4 +237,9 @@ export interface ModelsCatalog {
 
 export async function getModelCatalog(): Promise<ModelsCatalog> {
   return invoke<ModelsCatalog>('get_model_catalog')
+}
+
+
+export async function syncModelToCodex(model: string): Promise<void> {
+  return invoke<void>("sync_model_to_codex", { model })
 }

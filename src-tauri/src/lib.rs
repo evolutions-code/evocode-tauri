@@ -58,11 +58,11 @@ fn get_config_path() -> Option<PathBuf> {
     let home = std::env::var_os("USERPROFILE")
         .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)?;
-    let primary = home.join(".evocode/config.toml");
+    let primary = home.join(".evocode/config.json");
     if primary.exists() {
         return Some(primary);
     }
-    let typo_compat = home.join(".evocde/config.toml");
+    let typo_compat = home.join(".evocde/config.json");
     if typo_compat.exists() {
         return Some(typo_compat);
     }
@@ -277,33 +277,56 @@ async fn read_config() -> Result<String, String> {
         .await
         .map_err(|e| e.to_string())
 }
+#[tauri::command]
+async fn read_config_json() -> Result<evocode_config::EvocodeConfig, String> {
+    match evocode_config::load_config() {
+        Ok(cfg) => Ok(cfg),
+        Err(_) => Ok(evocode_config::EvocodeConfig::default()),
+    }
+}
 
 
 
 #[tauri::command]
 async fn save_config(config: evocode_config::EvocodeConfig) -> Result<(), String> {
+    tracing::info!("save_config received: model={:?}, provider={:?}", config.model, config.provider);
     // Ensure ~/.evocode/ directory exists before writing
     if let Some(home) = dirs::home_dir() {
         let _ = std::fs::create_dir_all(home.join(".evocode"));
     }
-    config.save().map_err(|e| e.to_string())
+    let result = config.save().map_err(|e| e.to_string());
+    tracing::info!("save_config result: {:?}", result);
+    if let Ok(ref config_path) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        let path = std::path::Path::new(&config_path).join(".evocode/config.json");
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            tracing::info!("config.json after save: {}", content);
+        }
+    }
+    result
 }
 
 
 
 #[tauri::command]
 async fn sync_to_codex() -> Result<(), String> {
-    // Reads ~/.evocode/config.toml and syncs the active provider into
-    // ~/.codex/config.toml via sync_active_provider_to_codex. The provider
-    // block only writes name, requires_openai_auth, and the local bridge
-    // URL (127.0.0.1:17761). Other Codex config keys are left untouched.
     let config = evocode_config::load_config().map_err(|e| e.to_string())?;
     let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
-    config
-        .sync_active_provider_to_codex(&codex_home)
-        .map_err(|e| e.to_string())
+    config.setup_codex_home(&codex_home).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn sync_model_to_codex(model: String) -> Result<(), String> {
+    let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
+    let config_path = codex_home.join("config.toml");
+    let toml_str = std::fs::read_to_string(&config_path).unwrap_or_default();
+    let mut cfg: toml::Value = toml::from_str(&toml_str).unwrap_or(toml::Value::Table(toml::Table::new()));
+    if let Some(table) = cfg.as_table_mut() {
+        table.insert("model".to_string(), toml::Value::String(model));
+    }
+    let out = toml::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
+    std::fs::write(&config_path, &out).map_err(|e| e.to_string())?;
+    Ok(())
+}
 #[tauri::command]
 async fn test_provider_connectivity(
     base_url: String,
@@ -1461,8 +1484,8 @@ fn parse_rollout_entries(content: &str) -> Vec<SessionEntry> {
                         out.push(SessionEntry::Approval { timestamp, text: combined });
                     },
                     "file" => {
-                        let path_s = payload.and_then(|p| p.get("path")).and_then(|t| t.as_str()).unwrap_or("").to_string();
-                        let content = payload.and_then(|p| p.get("content")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let _path_s = payload.and_then(|p| p.get("path")).and_then(|t| t.as_str()).unwrap_or("").to_string();
+                        let _content = payload.and_then(|p| p.get("content")).and_then(|t| t.as_str()).unwrap_or("").to_string();
                         // path_s and content are stored in FileEntry
                     },
                     // `response_item:reasoning` is intentionally skipped:
@@ -1694,7 +1717,9 @@ pub fn run() {
             set_bridge_port,
             set_max_request_body_size,
             read_config,
+            read_config_json,
             sync_to_codex,
+            sync_model_to_codex,
             get_bridge_logs,
             get_bridge_logs_tail,
             get_bridge_logs_range,
