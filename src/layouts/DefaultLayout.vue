@@ -99,23 +99,38 @@
   <!-- Update modal -->
   <a-modal
     v-model:open="showUpdateModal"
-    :title="t('update.found')"
     :footer="null"
     :closable="true"
-    width="420px"
+    width="400px"
     class="update-modal"
+    :maskClosable="true"
     >
+    <template #title>
+      <div class="update-modal-title-bar">
+        <ArrowDownOutlined class="update-title-icon" />
+        <span>{{ t('update.found') }}</span>
+      </div>
+    </template>
     <div class="update-modal-body">
-      <ArrowDownOutlined class="update-modal-icon" />
-      <p class="update-modal-version">{{ t('update.modal_version') }} <strong>v{{ latestVersion }}</strong></p>
-      <p class="update-modal-current">{{ t('update.modal_current') }} v{{ currentVersion }}</p>
-      <a-button type="primary" size="large" block @click="downloadUpdate">
-        <template #icon><DownloadOutlined /></template>
-        {{ t('update.download') }}
-      </a-button>
-      <a-button size="small" type="text" block class="update-modal-skip" @click="showUpdateModal = false">
-        {{ t('update.modal_skip') }}
-      </a-button>
+      <div class="update-hero">
+        <div class="update-hero-icon-wrap">
+          <ArrowDownOutlined class="update-hero-icon" />
+        </div>
+        <div class="update-hero-info">
+          <div class="update-badge">v{{ latestVersion }}</div>
+          <div class="update-current-label">{{ t('update.modal_current') }} <span class="current-version">v{{ currentVersion }}</span></div>
+        </div>
+      </div>
+      <div class="update-divider"></div>
+      <div class="update-actions">
+        <a-button type="primary" size="large" block class="update-btn-download" @click="downloadUpdate">
+          <template #icon><DownloadOutlined /></template>
+          {{ t('update.download') }}
+        </a-button>
+        <a-button size="small" type="text" block class="update-modal-skip" @click="showUpdateModal = false">
+          {{ t('update.modal_skip') }}
+        </a-button>
+      </div>
     </div>
   </a-modal>
   </a-layout>
@@ -402,33 +417,136 @@ onMounted(async () => {
 }
 </style>
 
-.update-modal-body {
-  text-align: center;
-  padding: 12px 0;
+.update-modal :deep(.ant-modal-content) {
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
-.update-modal-icon {
-  font-size: 48px;
-  color: var(--ok);
-  display: block;
-  margin: 0 auto 16px;
+
+.update-modal :deep(.ant-modal-header) {
+  padding: 20px 24px 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  background: transparent;
 }
-.update-modal-version {
-  font-size: 18px;
+
+.update-modal-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-1);
-  margin-bottom: 4px;
 }
-.update-modal-current {
+
+.update-title-icon {
+  font-size: 18px;
+  color: var(--ok);
+}
+
+/* Body */
+.update-modal-body {
+  padding: 8px 24px 20px;
+}
+
+/* Hero area */
+.update-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 0;
+}
+
+.update-hero-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(82,196,26,0.15) 0%, rgba(82,196,26,0.08) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(82,196,26,0.2);
+}
+
+.update-hero-icon {
+  font-size: 28px;
+  color: var(--ok);
+}
+
+.update-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.3px;
+}
+
+.update-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 10px var(--ok);
+  flex-shrink: 0;
+}
+
+.update-current-label {
   font-size: 13px;
   color: var(--text-3);
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+.current-version {
+  font-family: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+/* Divider */
+.update-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0 16px;
+}
+
+/* Buttons */
+.update-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-btn-download {
+  height: 44px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(82,196,26,0.25);
+}
+
 .update-modal-skip {
-  margin-top: 8px;
+  height: 32px;
   color: var(--text-4);
+  font-size: 13px;
+  border-radius: 8px;
 }
-.update-modal :deep(.ant-modal-header) {
-  text-align: center;
+.update-modal-skip:hover {
+  color: var(--text-3);
+  background: var(--bg-elev-2) !important;
 }
 
 
