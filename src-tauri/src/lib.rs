@@ -177,6 +177,10 @@ async fn set_bridge_port(state: State<'_, BridgeState>, port: u16) -> Result<(),
     if state.handle.lock().await.is_some() {
         return Err("Cannot change port while bridge is running. Please stop the bridge first.".into());
     }
+    // Ensure ~/.evocode/ directory exists before writing
+    if let Some(home) = dirs::home_dir() {
+        let _ = std::fs::create_dir_all(home.join(".evocode"));
+    }
     let mut config = evocode_config::EvocodeConfig::load().unwrap_or_default();
     config.port = Some(port);
     config.save().map_err(|e| e.to_string())?;
@@ -186,6 +190,10 @@ async fn set_bridge_port(state: State<'_, BridgeState>, port: u16) -> Result<(),
 
 #[tauri::command]
 async fn set_max_request_body_size(size: Option<u64>) -> Result<(), String> {
+    // Ensure ~/.evocode/ directory exists before writing
+    if let Some(home) = dirs::home_dir() {
+        let _ = std::fs::create_dir_all(home.join(".evocode"));
+    }
     let mut config = evocode_config::EvocodeConfig::load().unwrap_or_default();
     config.max_request_body_size = size;
     config.save().map_err(|e| e.to_string())
@@ -274,6 +282,10 @@ async fn read_config() -> Result<String, String> {
 
 #[tauri::command]
 async fn save_config(config: evocode_config::EvocodeConfig) -> Result<(), String> {
+    // Ensure ~/.evocode/ directory exists before writing
+    if let Some(home) = dirs::home_dir() {
+        let _ = std::fs::create_dir_all(home.join(".evocode"));
+    }
     config.save().map_err(|e| e.to_string())
 }
 
