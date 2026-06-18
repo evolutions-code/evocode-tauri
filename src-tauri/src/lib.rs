@@ -117,7 +117,7 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
     };
 
     // Clear log file so each bridge start shows fresh logs
-    let _ = std::fs::write("target/logs/temp.log", "");
+    let _ = std::fs::write(bridge_log_path(), "");
 
     let handle = tokio::spawn(async move {
         if let Err(e) = evocode_proto::serve(cfg).await {
@@ -193,7 +193,7 @@ async fn set_max_request_body_size(size: Option<u64>) -> Result<(), String> {
 
 #[tauri::command]
 async fn get_bridge_logs() -> Result<Vec<String>, String> {
-    let log_path = PathBuf::from("target/logs/temp.log");
+    let log_path = bridge_log_path();
     let bytes = std::fs::read(&log_path).unwrap_or_default();
     let text = String::from_utf8_lossy(&bytes);
     Ok(text.lines().map(|l| l.to_string()).collect())
@@ -201,7 +201,7 @@ async fn get_bridge_logs() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 async fn get_bridge_logs_tail(count: usize) -> Result<LogTailResult, String> {
-    let log_path = PathBuf::from("target/logs/temp.log");
+    let log_path = bridge_log_path();
     let log_path = match std::fs::canonicalize(&log_path) {
         Ok(p) => p,
         Err(_) => return Ok(LogTailResult { lines: vec![], total_lines: 0 }),
@@ -230,7 +230,7 @@ async fn get_bridge_logs_tail(count: usize) -> Result<LogTailResult, String> {
 
 #[tauri::command]
 async fn get_bridge_logs_range(start: usize, count: usize) -> Result<LogRangeResult, String> {
-    let log_path = PathBuf::from("target/logs/temp.log");
+    let log_path = bridge_log_path();
     let log_path = match std::fs::canonicalize(&log_path) {
         Ok(p) => p,
         Err(_) => return Ok(LogRangeResult { lines: vec![], total_lines: 0 }),
@@ -1619,25 +1619,37 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
     }
 }
 
+/// Absolute path to the bridge log file (~/.evocode/logs/temp.log).
+fn bridge_log_path() -> PathBuf {
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let dir = home.join(".evocode").join("logs");
+    let _ = std::fs::create_dir_all(&dir);
+    dir.join("temp.log")
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Init tracing-based logging to target/logs/temp.log
-    let log_dir = "target/logs/";
-    println!("Logging to {}", log_dir);
-    let _ = std::fs::create_dir_all(log_dir);
-    let log_path = std::path::PathBuf::from("target/logs/temp.log");
+    // Init tracing-based logging to ~/.evocode/logs/temp.log
+    let log_path = bridge_log_path();
+    println!("Logging to {}", log_path.display());
     // Remove old log file before this run
     let _ = std::fs::remove_file(&log_path);
     // Initialize tracing subscriber with file output
     let _ = tracing_subscriber::fmt()
         .with_timer(LocalTimer)
         .with_ansi(false)
-        .with_writer(move || {
-            std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&log_path)
-                .expect("failed to open log file")
+        .with_writer({
+            let log_path = log_path.clone();
+            move || {
+                std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&log_path)
+                    .expect("failed to open log file")
+            }
         })
         .with_env_filter(
             tracing_subscriber::EnvFilter::builder()
