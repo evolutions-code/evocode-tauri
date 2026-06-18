@@ -57,7 +57,7 @@ import { ref, computed, onMounted } from "vue"
 import { useLocale } from "../composables/useLocale"
 import { useRouter } from "vue-router"
 
-import { startBridge, stopBridge, getBridgeStatus, readConfig, getAppVersion, getSessions } from "../api/bridge"
+import { startBridge, stopBridge, getBridgeStatus, readConfigJson, getAppVersion, getSessions } from "../api/bridge"
 import type { SessionInfo } from "../api/bridge"
 import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue"
 
@@ -88,8 +88,8 @@ async function toggleBridge() {
     return
   }
   try {
-    const text = await readConfig()
-    const hasProvider = text.includes('provider = "') && text.includes("[providers.")
+    const cfg = await readConfigJson()
+    const hasProvider = !!(cfg.provider && cfg.providers && Object.keys(cfg.providers).length)
     if (!hasProvider) { router.push("/config"); return }
   } catch {}
   loading.value = true
@@ -132,17 +132,8 @@ onMounted(async () => {
   await updateStatus()
   currentVersion.value = await getAppVersion()
   try {
-    const cfg = await readConfig()
-    // Parse provider name from config
-    const lines = cfg.split('\n')
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('provider = ')) {
-        const match = trimmed.match(/provider = ["'](.+?)["']/)
-        if (match) activeProvider.value = match[1]
-        break
-      }
-    }
+    const cfg = await readConfigJson()
+    activeProvider.value = cfg.provider || ""
   } catch {}
   try {
     await fetchSessions()
