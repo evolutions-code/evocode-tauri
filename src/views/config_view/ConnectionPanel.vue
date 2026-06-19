@@ -243,7 +243,7 @@ const wirePresetKey = reactive<Record<string, string>>({})
 const testingConn = ref(false)
 const saving = ref(false)
 const syncing = ref(false)
-const testModelId = undefined
+const testModelId = ref(undefined)
 const defaultModelRef = ref("")
 const allModelOptions = computed(() => {
   const opts: { value: string; label: string }[] = []
