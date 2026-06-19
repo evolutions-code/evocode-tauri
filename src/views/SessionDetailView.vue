@@ -14,7 +14,7 @@
             <span class="sd-dot">&middot;</span>
             <span>{{ displayTokens(sessionInfo.used_tokens, sessionInfo.used) }}/{{ displayTokens(sessionInfo.total_tokens, sessionInfo.total) }}</span>
             <span class="sd-dot">&middot;</span>
-            <span>{{ entries.length }} {{ t("session.entries") }}</span>
+            <span>{{ entries.length }} {{ t("session.entries") }}</span><span class="sd-dot" v-if="sessionInfo?.accumulated">·</span><span v-if="sessionInfo?.accumulated">{{ formatTokens(sessionInfo.accumulated) }} total</span>
           </span>
         </div>
       </div>
@@ -229,23 +229,7 @@ function formatJsonArg(arg: string | undefined): string {
   }
 }
 
-function renderMarkdown(text: string): string {
-  if (!text) return ""
-  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-  let src = escape(text)
-  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, body) => {
-    const code = body.replace(/^\n/, "").replace(/\n$/, "")
-    return '<pre class="md-pre"><code class="md-code-block">' + code + '</code></pre>'
-  })
-  src = src.replace(/`([^`\n]+)`/g, '<code class="md-code">$1</code>')
-  src = src.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
-  src = src.replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
-  src = src.split(/\n{2,}/).map((p) => {
-    if (p.startsWith("<pre")) return p
-    return '<p>' + p.replace(/\n/g, "<br>") + '</p>'
-  }).join("")
-  return src
-}
+
 
 onMounted(async () => {
   try {
@@ -268,6 +252,25 @@ onMounted(async () => {
   }
   scrollToBottom()
 })
+
+function renderMarkdown(text: string): string {
+  if (!text) return ""
+  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  let src = escape(text)
+  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, body) => {
+    const code = body.replace(/^\n/, "").replace(/\n$/, "")
+    return '<pre class="md-pre"><code class="md-code-block">' + code + '</code></pre>'
+  })
+  src = src.replace(/`([^`\n]+)`/g, '<code class="md-code">$1</code>')
+  src = src.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+  src = src.replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
+  src = src.split(/\n{2,}/).map((p) => {
+    if (p.startsWith("<pre")) return p
+    return '<p>' + p.replace(/\n/g, "<br>") + '</p>'
+  }).join("")
+  return src
+}
+
 </script>
 
 <style scoped>
