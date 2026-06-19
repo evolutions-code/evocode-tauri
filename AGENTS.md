@@ -12,6 +12,7 @@
 - Vue 3 Composition API with `<script setup lang="ts">`
 - Use `ref` / `reactive` for state
 - Use `defineExpose` when exposing to parent
+- Use Ant Design Vue components
 - i18n: use `useLocale()` + `t()`
 - TypeScript strict mode
 
