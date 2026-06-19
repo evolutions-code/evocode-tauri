@@ -46,7 +46,7 @@ export const en = {
   "bridge.booting": "Booting up...",
   "bridge.copy": "Copy",
   "bridge.url": "URL",
-  "bridge.idle": "Idle",
+  "bridge.idle": "Click Start to sync to Codex",
 
   // Config
   "config.settings": "Settings",
@@ -222,4 +222,5 @@ export const en = {
   "session.collapse": "Collapse All",
   "session.empty": "No readable content",
 }
+
 

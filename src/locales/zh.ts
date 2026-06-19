@@ -46,7 +46,7 @@ export const zh = {
   "bridge.booting": "正在启动...",
   "bridge.copy": "复制",
   "bridge.url": "URL",
-  "bridge.idle": "空闲",
+  "bridge.idle": "点击启动，同步配置到 Codex",
 
   // Config
   "config.settings": "设置",
@@ -222,5 +222,6 @@ export const zh = {
   "session.collapse": "收起全部",
   "session.empty": "暂无可读内容",
 }
+
 
 

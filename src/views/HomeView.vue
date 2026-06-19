@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 
 <div class="home">
     <section class="bridge-section">
@@ -8,7 +8,6 @@
         :provider="activeProvider"
         @toggle="toggleBridge" />
     </section>
-
 
 
     <section class="sessions-section">
@@ -57,9 +56,10 @@ import { ref, computed, onMounted } from "vue"
 import { useLocale } from "../composables/useLocale"
 import { useRouter } from "vue-router"
 
-import { startBridge, stopBridge, getBridgeStatus, readConfigJson, getAppVersion, getSessions } from "../api/bridge"
+import { startBridge, stopBridge, getBridgeStatus, readConfigJson, getAppVersion, getSessions, syncToCodex } from "../api/bridge"
 import type { SessionInfo } from "../api/bridge"
 import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue"
+import { message } from "ant-design-vue"
 
 import ContextGrid from "../components/ContextGrid.vue"
 import BridgeStatus from "../components/BridgeStatus.vue"
@@ -92,9 +92,16 @@ async function toggleBridge() {
     const hasProvider = !!(cfg.provider && cfg.providers && Object.keys(cfg.providers).length)
     if (!hasProvider) { router.push("/config"); return }
   } catch {}
+
   loading.value = true
-  try { await startBridge(); await updateStatus() }
-  finally { loading.value = false }
+  try {
+    await syncToCodex()
+    message.success(t("config.synced_all"), 3)
+    await startBridge()
+    await updateStatus()
+  } finally {
+    loading.value = false
+  }
 }
 
 const totalPages = computed(() => Math.max(1, Math.ceil(sessionsTotal.value / pageSize)))
@@ -133,7 +140,7 @@ onMounted(async () => {
   currentVersion.value = await getAppVersion()
   try {
     const cfg = await readConfigJson()
-    activeProvider.value = cfg.provider || ""
+    // do not expose raw provider key
   } catch {}
   try {
     await fetchSessions()
@@ -233,6 +240,8 @@ onMounted(async () => {
   font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
 }
 </style>
+
+
 
 
 
