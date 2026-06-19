@@ -94,14 +94,8 @@ async function toggleBridge() {
   } catch {}
 
   loading.value = true
-  try {
-    await syncToCodex()
-    message.success(t("config.synced_all"), 3)
-    await startBridge()
-    await updateStatus()
-  } finally {
-    loading.value = false
-  }
+  try { await startBridge(); await updateStatus() }
+  finally { loading.value = false }
 }
 
 const totalPages = computed(() => Math.max(1, Math.ceil(sessionsTotal.value / pageSize)))
@@ -240,6 +234,7 @@ onMounted(async () => {
   font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
 }
 </style>
+
 
 
 
