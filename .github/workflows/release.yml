@@ -1,4 +1,4 @@
-name: Release
+﻿name: Release
 
 on:
   push:
@@ -44,6 +44,14 @@ jobs:
       - name: Install frontend dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Get last commit message
+        id: last_commit
+        shell: bash
+        run: |
+          echo "message<<EOF" >> "$GITHUB_OUTPUT"
+          git log -1 --pretty=format:"%s%n%n%b" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -51,7 +59,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'evocode-v__VERSION__'
-          releaseBody: 'See the assets to download this version.'
+          releaseBody: ${{ steps.last_commit.outputs.message }}
           releaseDraft: false
           prerelease: false
           target: ${{ matrix.target }}
