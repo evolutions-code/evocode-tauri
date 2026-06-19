@@ -1,4 +1,4 @@
-export const en = {
+﻿export const en = {
   // Sidebar
   "dashboard": "Dashboard",
   "configuration": "Configuration",
@@ -182,6 +182,7 @@ export const en = {
 
   // Update
   "update.check": "Check Update",
+  "update.checking_title": "Checking for Updates",
   "update.up_to_date": "Already up to date!",
   "update.found": "Update Available",
   "update.error": "Update check failed",

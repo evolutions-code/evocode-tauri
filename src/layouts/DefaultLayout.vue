@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-layout class="app-shell">
     <a-layout-sider
       v-model:collapsed="collapsed"
@@ -96,7 +96,27 @@
       </a-layout-content>
     </a-layout>
 
-  <!-- Update modal -->
+  <!-- Update checking modal -->
+  <a-modal
+    v-model:open="showUpdateLoadingModal"
+    :footer="null"
+    :closable="true"
+    width="320px"
+    class="update-modal"
+    :centered="true"
+    :maskClosable="false"
+    :bodyStyle="{ padding: 0 }"
+    destroyOnClose
+    >
+    <div class="update-body update-loading-body">
+      <div class="update-title">{{ t('update.checking_title') }}</div>
+      <div class="update-loading-spinner">
+        <a-spin size="large" />
+      </div>
+    </div>
+  </a-modal>
+
+  <!-- Update found modal -->
   <a-modal
     v-model:open="showUpdateModal"
     :footer="null"
@@ -104,7 +124,7 @@
     width="360px"
     class="update-modal"
     :centered="true"
-    :maskClosable="true"
+    :maskClosable="false"
     :bodyStyle="{ padding: 0 }"
     destroyOnClose
     >
@@ -117,7 +137,6 @@
       <div class="update-current">{{ t('update.modal_current') }} v{{ currentVersion }}</div>
       <div class="update-btns">
         <a-button type="primary" class="btn-update" @click="downloadUpdate">{{ t('update.download') }}</a-button>
-        <a-button class="btn-skip" @click="showUpdateModal = false">{{ t('update.modal_skip') }}</a-button>
       </div>
     </div>
   </a-modal>
@@ -153,6 +172,7 @@ const updateUrl = ref('')
 const latestVersion = ref('')
 const checkingUpdate = ref(false)
 const showUpdateModal = ref(false)
+const showUpdateLoadingModal = ref(false)
 
 const { locale, t, toggle: localeToggle } = useLocale()
 
@@ -206,10 +226,13 @@ onMounted(async () => {
   try {
     currentVersion.value = await getAppVersion()
   } catch {}
-  // auto-check update on first launch
-  checkingUpdate.value = true
+  // auto-check update on first app launch only (not on page refresh)
+  if (sessionStorage.getItem('_update_checked')) return
+  sessionStorage.setItem('_update_checked', '1')
+  showUpdateLoadingModal.value = true
   try {
     const result = await checkUpdate()
+    showUpdateLoadingModal.value = false
     if (result.hasUpdate) {
       latestVersion.value = result.latestVersion
       updateUrl.value = result.releaseUrl
@@ -217,9 +240,8 @@ onMounted(async () => {
       showUpdateModal.value = true
     }
   } catch {
+    showUpdateLoadingModal.value = false
     // silent fail for auto-check
-  } finally {
-    checkingUpdate.value = false
   }
 })
 </script>
@@ -426,6 +448,25 @@ onMounted(async () => {
   font-weight: 700;
   color: var(--text-1);
   margin-bottom: 16px;
+}
+
+.update-loading-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 24px;
+  padding-top: 32px;
+  padding-bottom: 28px;
+}
+.update-loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+}
+.update-loading-body .update-title {
+  margin-bottom: 0;
 }
 .update-info {
   display: flex;

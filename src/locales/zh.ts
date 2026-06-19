@@ -1,4 +1,4 @@
-export const zh = {
+﻿export const zh = {
   // Sidebar
   "dashboard": "仪表盘",
   "configuration": "配置",
@@ -182,6 +182,7 @@ export const zh = {
 
   // Update
   "update.check": "检查更新",
+  "update.checking_title": "正在检查更新",
   "update.up_to_date": "已是最新版本！",
   "update.found": "发现新版本",
   "update.error": "检查更新失败",
