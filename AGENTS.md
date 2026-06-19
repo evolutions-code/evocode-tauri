@@ -24,3 +24,8 @@
 - `src/components/` — shared components
 - `src/composables/` — shared composition functions
 - `src-tauri/src/` — Rust backend
+
+## Validation Checklist
+
+- After completing any functional change, run `npx vue-tsc --noEmit && npx vite build` to verify no TypeScript or build errors.
+- Fix any reported errors before considering the change done.

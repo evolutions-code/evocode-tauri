@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 
 <div class="home">
     <section class="bridge-section">
@@ -56,10 +56,9 @@ import { ref, computed, onMounted } from "vue"
 import { useLocale } from "../composables/useLocale"
 import { useRouter } from "vue-router"
 
-import { startBridge, stopBridge, getBridgeStatus, readConfigJson, getAppVersion, getSessions, syncToCodex } from "../api/bridge"
+import { startBridge, stopBridge, getBridgeStatus, readConfigJson, getAppVersion, getSessions } from "../api/bridge"
 import type { SessionInfo } from "../api/bridge"
 import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue"
-import { message } from "ant-design-vue"
 
 import ContextGrid from "../components/ContextGrid.vue"
 import BridgeStatus from "../components/BridgeStatus.vue"
@@ -133,7 +132,7 @@ onMounted(async () => {
   await updateStatus()
   currentVersion.value = await getAppVersion()
   try {
-    const cfg = await readConfigJson()
+    await readConfigJson()
     // do not expose raw provider key
   } catch {}
   try {
