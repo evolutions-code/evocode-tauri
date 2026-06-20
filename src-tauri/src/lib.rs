@@ -1,4 +1,4 @@
-mod connectivity;
+﻿mod connectivity;
 mod traits;
 mod fetchers;
 mod prompts;
@@ -300,7 +300,7 @@ async fn save_config(config: evocode_config::EvocodeConfig) -> Result<(), String
     if let Ok(ref config_path) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
         let path = std::path::Path::new(&config_path).join(".evocode/config.json");
         if let Ok(content) = std::fs::read_to_string(&path) {
-            tracing::info!("config.json after save: {}", content);
+        tracing::info!("config.json after save: {}", content);
         }
     }
     result
@@ -312,7 +312,50 @@ async fn save_config(config: evocode_config::EvocodeConfig) -> Result<(), String
 async fn sync_to_codex() -> Result<(), String> {
     let config = evocode_config::load_config().map_err(|e| e.to_string())?;
     let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
-    config.setup_codex_home(&codex_home).map_err(|e| e.to_string())
+    config.setup_codex_home(&codex_home).map_err(|e| e.to_string())?;
+
+    // Determine base_instructions content:
+    // Priority:
+    // 1. if user has prompt files AND .codex/AGENTS.md is non-empty, use that
+    // 2. otherwise fall back to bundled prompt.md
+    let has_prompt_files = crate::prompts::has_prompt_files();
+    let agents_path = crate::prompts::agents_file_path();
+    let prompt_source = if has_prompt_files && agents_path.exists() {
+        let user_content = std::fs::read_to_string(&agents_path).unwrap_or_default();
+        let trimmed = user_content.trim();
+        if !trimmed.is_empty() {
+            trimmed.to_string()
+        } else {
+            crate::prompts::CORE_PROMPT.trim().to_string()
+        }
+    } else {
+        crate::prompts::CORE_PROMPT.trim().to_string()
+    };
+
+    let catalog_path = codex_home.join("models_catalog.json");
+    if catalog_path.exists() {
+        let catalog_str = std::fs::read_to_string(&catalog_path)
+            .map_err(|e| format!("读取 models_catalog 失败: {}", e))?;
+        let mut catalog: serde_json::Value = serde_json::from_str(&catalog_str)
+            .map_err(|e| format!("解析 models_catalog 失败: {}", e))?;
+
+        if let Some(models) = catalog.get_mut("models").and_then(|m| m.as_array_mut()) {
+            for model in models.iter_mut() {
+                if let Some(obj) = model.as_object_mut() {
+                    obj.insert("base_instructions".to_string(), serde_json::Value::String(prompt_source.clone()));
+                }
+            }
+        }
+
+        let updated = serde_json::to_string_pretty(&catalog)
+            .map_err(|e| format!("序列化 models_catalog 失败: {}", e))?;
+        std::fs::write(&catalog_path, &updated)
+            .map_err(|e| format!("写入 models_catalog 失败: {}", e))?;
+    tracing::info!("[prompts] injected base_instructions from {}", 
+            if agents_path.exists() { "user AGENTS.md" } else { "bundled prompt.md" });
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -1738,6 +1781,7 @@ pub fn run() {
             fetch_models,
             save_config,
             prompts::read_agents_file,
+            prompts::read_core_prompt,
             prompts::write_agents_file,
             prompts::list_prompt_files,
             prompts::write_prompt_file,
@@ -1766,6 +1810,7 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
 
 
 

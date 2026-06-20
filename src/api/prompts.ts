@@ -25,6 +25,10 @@ export async function writePromptFile(name: string, content: string): Promise<vo
   return invoke<void>('write_prompt_file', { name, content })
 }
 
+export async function readCorePrompt(): Promise<string> {
+  return invoke<string>('read_core_prompt')
+}
+
 export async function deletePromptFile(name: string): Promise<void> {
   return invoke<void>('delete_prompt_file', { name })
 }

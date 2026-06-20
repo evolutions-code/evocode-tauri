@@ -148,6 +148,7 @@ import {
 } from '@ant-design/icons-vue'
 import {
   listPromptFiles,
+  readCorePrompt,
   readPromptFile,
   writePromptFile,
   deletePromptFile,
@@ -155,6 +156,7 @@ import {
   writeAgentsFile,
   type PromptFile,
 } from '../api/prompts'
+import { syncToCodex } from '../api/bridge'
 
 const { t } = useLocale()
 
@@ -234,11 +236,13 @@ async function confirmNewPrompt() {
 
   const now = new Date().toISOString()
   try {
-    await writePromptFile(name, '')
+    // Create file with empty content, then pre-fill editor with core prompt
+    const corePrompt = await readCorePrompt()
+    await writePromptFile(name, corePrompt)
     promptFiles.value.unshift({ name, updated_at: now })
     selectedName.value = name
     editingName.value = name
-    editingContent.value = ''
+    editingContent.value = corePrompt
     showNewModal.value = false
   } catch (err) {
     console.error('Failed to create prompt:', err)
@@ -270,9 +274,11 @@ async function handleActivate() {
   if (!editingContent.value.trim()) return
   activating.value = true
   try {
+    // Write to AGENTS.md, then apply to Codex model catalog
     await writeAgentsFile(editingContent.value)
     agentsContent.value = editingContent.value
     agentsExists.value = true
+    await syncToCodex()
     message.success(t('prompts.activated_ok'))
   } catch (err) {
     console.error('Failed to activate prompt:', err)

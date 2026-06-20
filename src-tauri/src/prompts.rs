@@ -1,6 +1,9 @@
 ﻿use serde::{Serialize};
 use std::path::PathBuf;
 
+/// Core system prompt compiled from prompt.md
+pub const CORE_PROMPT: &str = include_str!("../prompt.md");
+
 /// Directory where prompt files are stored (~/.evocode/prompts/)
 fn get_prompts_dir() -> PathBuf {
     let home = std::env::var_os("USERPROFILE")
@@ -12,6 +15,26 @@ fn get_prompts_dir() -> PathBuf {
 
 /// Returns the path to .codex/AGENTS.md for the current project.
 /// Tries current directory first, then falls back to home directory.
+/// Returns true if there are any prompt files in ~/.evocode/prompts/
+pub fn has_prompt_files() -> bool {
+    let dir = get_prompts_dir();
+    if !dir.exists() {
+        return false;
+    }
+    std::fs::read_dir(&dir)
+        .ok()
+        .map(|entries| {
+            entries.filter_map(|e| e.ok()).any(|e| {
+                e.path().extension().and_then(|s| s.to_str()) == Some("md")
+            })
+        })
+        .unwrap_or(false)
+}
+
+pub fn agents_file_path() -> PathBuf {
+    get_codex_agents_path()
+}
+
 fn get_codex_agents_path() -> PathBuf {
     // Strategy 1: current working directory (works in `tauri dev`)
     let home = std::env::var_os("USERPROFILE")
@@ -99,6 +122,12 @@ pub async fn write_prompt_file(name: String, content: String) -> Result<(), Stri
     let path = prompt_file_path(&name);
     std::fs::write(&path, &content).map_err(|e| format!("写入提示词文件失败: {}", e))?;
     Ok(())
+}
+
+/// Return the bundled core system prompt content
+#[tauri::command]
+pub async fn read_core_prompt() -> Result<String, String> {
+    Ok(CORE_PROMPT.to_string())
 }
 
 /// Delete a prompt file by name
