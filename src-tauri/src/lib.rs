@@ -1650,7 +1650,7 @@ fn load_tray_icon() -> Image<'static> {
 fn show_main_window(app: &AppHandle) {
     if let Some(win) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         #[cfg(target_os = "macos")]
-        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+        let _ = app.set_dock_visibility(true);
         let _ = win.show();
         let _ = win.unminimize();
         let _ = win.set_focus();
@@ -1702,7 +1702,7 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
     {
         api.prevent_close();
         #[cfg(target_os = "macos")]
-        let _ = window.app_handle().set_activation_policy(tauri::ActivationPolicy::Accessory);
+        let _ = window.app_handle().set_dock_visibility(false);
         let _ = window.hide();
     }
 }
@@ -1814,7 +1814,6 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
 
 
 
