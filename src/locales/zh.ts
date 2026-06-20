@@ -222,7 +222,32 @@
   "session.expand": "展开全部",
   "session.collapse": "收起全部",
   "session.empty": "暂无可读内容",
-}
 
+  // Prompts
+  "prompts.title": "提示词",
+  "prompts.presets": "提示词列表",
+  "prompts.new": "新建",
+  "prompts.no_presets": "暂无提示词",
+  "prompts.no_presets_hint": "点击「新建」创建第一个提示词",
+  "prompts.select_hint": "选择或创建一个提示词",
+  "prompts.select_hint_desc": "从左侧列表选择一个预设，或点击「新建」创建新的提示词",
+  "prompts.name_placeholder": "提示词名称",
+  "prompts.content": "内容",
+  "prompts.content_placeholder": "编写提示词内容（Markdown 格式）",
+  "prompts.chars": "字符",
+  "prompts.save": "保存",
+  "prompts.activate": "激活 → .codex/AGENTS.md",
+  "prompts.agents_exists": "AGENTS.md 已存在",
+  "prompts.agents_missing": "AGENTS.md 未创建",
+  "prompts.new_preset_name": "新提示词",
+  "prompts.delete_title": "删除提示词",
+  "prompts.delete_ok": "删除",
+  "prompts.delete_cancel": "取消",
+    "prompts.activated_ok": "提示词已同步 → .codex/AGENTS.md",
+  "prompts.activated_fail": "同步失败，请查看控制台日志",
+  "prompts.saved_ok": "提示词已保存",
+  "prompts.save_fail": "保存失败",
+  "prompts.delete_confirm": "确定删除提示词「{name}」？",
+}
 
 

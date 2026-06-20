@@ -1,6 +1,7 @@
 mod connectivity;
 mod traits;
 mod fetchers;
+mod prompts;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -1736,7 +1737,14 @@ pub fn run() {
             open_config_dir,
             fetch_models,
             save_config,
-        ])
+            prompts::read_agents_file,
+            prompts::write_agents_file,
+            prompts::list_prompt_files,
+            prompts::write_prompt_file,
+            prompts::read_prompt_file,
+            prompts::delete_prompt_file,
+            
+])
         .on_window_event(handle_window_event)
         .setup(|app| {
             let handle = app.handle().clone();
@@ -1758,3 +1766,8 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+
+
+
+

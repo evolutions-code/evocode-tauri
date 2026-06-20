@@ -4,6 +4,7 @@ import ConfigView from '../views/ConfigView.vue'
 import AboutView from '../views/AboutView.vue'
 import LogView from '../views/LogView.vue'
 import SessionDetailView from '../views/SessionDetailView.vue'
+import PromptsView from '../views/PromptsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -32,6 +33,11 @@ const router = createRouter({
       path: '/session/:id',
       name: 'session-detail',
       component: SessionDetailView
+    },
+    {
+      path: '/prompts',
+      name: 'prompts',
+      component: PromptsView
     }
   ]
 })

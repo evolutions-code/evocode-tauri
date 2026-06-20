@@ -29,7 +29,10 @@
           <template #icon><SettingOutlined /></template>
           <span>{{ t("configuration") }}</span>
         </a-menu-item>
-        <a-menu-item key="/logs">
+        <a-menu-item key="/prompts">
+          <template #icon><FileTextOutlined /></template>
+          <span>{{ t("prompts.title") }}</span>
+        </a-menu-item><a-menu-item key="/logs">
           <template #icon><CodeOutlined /></template>
           <span>{{ t("logs.title") }}</span>
         </a-menu-item>
@@ -511,3 +514,4 @@ onMounted(async () => {
   border-color: var(--text-3) !important;
 }
 </style>
+

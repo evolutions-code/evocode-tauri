@@ -222,6 +222,32 @@
   "session.expand": "Expand All",
   "session.collapse": "Collapse All",
   "session.empty": "No readable content",
+
+  // Prompts
+  "prompts.title": "Prompts",
+  "prompts.presets": "Presets",
+  "prompts.new": "New",
+  "prompts.no_presets": "No presets yet",
+  "prompts.no_presets_hint": "Click \"New\" to create your first prompt",
+  "prompts.select_hint": "Select or create a prompt",
+  "prompts.select_hint_desc": "Choose a preset from the left list, or click \"New\" to create one",
+  "prompts.name_placeholder": "Prompt name",
+  "prompts.content": "Content",
+  "prompts.content_placeholder": "Write your prompt content (Markdown)",
+  "prompts.chars": "chars",
+  "prompts.save": "Save",
+  "prompts.activate": "Activate → .codex/AGENTS.md",
+  "prompts.agents_exists": "AGENTS.md exists",
+  "prompts.agents_missing": "AGENTS.md not created",
+  "prompts.new_preset_name": "New Prompt",
+  "prompts.delete_title": "Delete Prompt",
+  "prompts.delete_ok": "Delete",
+  "prompts.delete_cancel": "Cancel",
+    "prompts.activated_ok": "Prompt synced → .codex/AGENTS.md",
+  "prompts.activated_fail": "Sync failed, check console logs",
+  "prompts.saved_ok": "Prompt saved",
+  "prompts.save_fail": "Save failed",
+  "prompts.delete_confirm": "Delete preset \"{name}\"?",
 }
 
 
