@@ -254,39 +254,28 @@ When using the shell, you must adhere to the following guidelines:
 
 ## apply_patch
 
-Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:
+Use the `apply_patch` tool to edit files. Try it first for single file edits; if it fails, use shell commands instead. Do not use for auto-generated content or bulk search-replace.
 
-*** Begin Patch
-[ one or more file sections ]
-*** End Patch
-
-Within that envelope, you get a sequence of file operations.
-You MUST include a header to specify the action you are taking.
-Each operation starts with one of three headers:
-
-*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).
-*** Delete File: <path> - remove an existing file. Nothing follows.
-*** Update File: <path> - patch an existing file in place (optionally with a rename).
-
-Example patch:
+Format:
 
 ```
 *** Begin Patch
-*** Add File: hello.txt
-+Hello world
-*** Update File: src/app.py
-*** Move to: src/main.py
-@@ def greet():
--print("Hi")
-+print("Hello, world!")
-*** Delete File: obsolete.txt
+*** Add File: <path>                create a new file
++<content>
+*** Delete File: <path>             remove a file
+*** Update File: <path>             modify an existing file
+*** Move to: <new-path>             (optional, after Update File)
+@@ <context>                        optional line to locate the edit position
+ <lines to keep>
+-<lines to remove>
++<lines to add>
 *** End Patch
 ```
 
-It is important to remember:
+**@@ context**: matched as a whole line (exact → rstrip → trim), not a substring. Use a line prefix from the file, e.g. `@@ fn convert_params`. Stack multiple `@@` lines to narrow down: `@@ class BaseClass` then `@@     def method()`.
 
-- You must include a header with your intended action (Add/Delete/Update)
-- You must prefix new lines with `+` even when creating a new file
+Keep at least 3 unchanged lines above and below `-`/`+` changes for unique identification.
+
 
 ## `update_plan`
 
