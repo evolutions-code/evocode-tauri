@@ -79,7 +79,7 @@
                 <template #icon><SaveOutlined /></template>
                 {{ t("prompts.save") }}
               </a-button>
-              <a-button @click="handleActivate" type="primary" ghost :loading="activating" :disabled="!editingContent.trim()">
+              <a-button @click="handleActivate" type="primary" :loading="activating" :disabled="!editingContent.trim()">
                 <template #icon><SendOutlined /></template>
                 {{ t("prompts.activate") }}
               </a-button>
