@@ -254,83 +254,42 @@ When using the shell, you must adhere to the following guidelines:
 
 ## apply_patch
 
-Use the `apply_patch` tool to edit files. Try it first for single file edits; if it fails, use shell commands instead. Do not use for auto-generated content or bulk search-replace.
+Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:
 
 - Attempt the patch up to 3 times if it fails
-- If all 3 attempts fail, fall back to using shell commands
+- If all 3 attempts fail, fall back to using shell commands to make the required file changes
 
-### Format
+*** Begin Patch
+[ one or more file sections ]
+*** End Patch
 
-The patch consists of a header, one or more file hunks, and a footer.
+Within that envelope, you get a sequence of file operations.
+You MUST include a header to specify the action you are taking.
+Each operation starts with one of three headers:
+
+*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).
+*** Delete File: <path> - remove an existing file. Nothing follows.
+*** Update File: <path> - patch an existing file in place (optionally with a rename).
+
+Example patch:
 
 ```
 *** Begin Patch
-*** Update File: <path>
-@@ <context>
- <keep this line>
--<remove this line>
-+<add this line>
- <keep this line>
+*** Add File: hello.txt
++Hello world
+*** Update File: src/app.py
+*** Move to: src/main.py
+@@ def greet():
+-print("Hi")
++print("Hello, world!")
+*** Delete File: obsolete.txt
 *** End Patch
 ```
 
-**Prefix markers** — each line in the hunk MUST start with exactly one of these characters, immediately followed by content (no space):
+It is important to remember:
 
-| Marker | Meaning |
-|--------|---------|
-| ` ` (space) | Context — line stays as-is |
-| `-` | Remove this line |
-| `+` | Add this line |
-
-The content after the marker is the EXACT line content. For example, to remove line `-,` the patch line is `--,` (marker `-` + content `-,`).
-
-### @@ context line
-
-`@@ <context>` is **optional** and appears ONCE per hunk, right after `*** Update File:`. The context text is matched against the file (**rstrip → trim**, exact, not substring). Pick a unique nearby line as anchor.
-
-Correct: `@@ fn main() {`  
-Correct: `@@ 5,`  
-Avoid stacking multiple `@@` lines — only the first `@@` after `*** Update File:` is recognized; subsequent ones will be rejected.
-
-### Example
-
-File `test.md`:
-```
-1,
-2,
-3,
-4,
-5,
--,
-7,
-8,
-```
-
-Change line 6 from `-,` to `6,`:
-```
-*** Begin Patch
-*** Update File: test.md
-@@ 5,
- 5,
---,
-+6,
- 7,
-*** End Patch
-```
-
-Note: `--,` means "remove the line `-,`" (first `-` is the remove marker, second `-` is the content).
-
-### Common mistakes
-
-| Mistake | Why it fails |
-|---------|-------------|
-| ` 5,` with extra spaces | The space is a prefix marker, not indentation. ` 5,` means "keep `5,`", not "keep `  5,`". |
-| `@@ @@` or two `@@` in a row | `@@` is per-file, not per-line. Only one `@@` hunks allowed. |
-| `- -,` (space after `-`) | The marker must be immediately followed by content. Write `--,` instead. |
-| `5,` without space prefix | Context lines MUST start with ` ` (space). Write ` 5,` instead. |
-
-Keep at least 3 unchanged lines above and below `-`/`+` changes for unique identification.
-
+- You must include a header with your intended action (Add/Delete/Update)
+- You must prefix new lines with `+` even when creating a new file
 
 ## `update_plan`
 
