@@ -256,6 +256,9 @@ When using the shell, you must adhere to the following guidelines:
 
 Use the `apply_patch` tool to edit files. Try it first for single file edits; if it fails, use shell commands instead. Do not use for auto-generated content or bulk search-replace.
 
+- Attempt the patch up to 3 times if it fails
+- If all 3 attempts fail, fall back to using shell commands to make the required file changes
+
 Format:
 
 ```
