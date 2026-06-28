@@ -538,6 +538,24 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 }
 
 /// Absolute path to the bridge log file (~/.evocode/logs/temp.log).
+/// Check whether the bridge is reachable by attempting a TCP connect
+/// to the configured port. Returns latency in milliseconds on success.
+#[tauri::command]
+async fn bridge_ping(state: State<'_, BridgeState>) -> Result<u64, String> {
+    let port = state.port.load(std::sync::atomic::Ordering::Relaxed);
+    let addr: std::net::SocketAddr = format!("127.0.0.1:{}", port)
+        .parse()
+        .map_err(|e| format!("Invalid address: {}", e))?;
+    let start = std::time::Instant::now();
+    tokio::task::spawn_blocking(move || {
+        match std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(2)) {
+            Ok(_) => Ok(start.elapsed().as_millis() as u64),
+            Err(e) => Err(format!("Bridge not reachable: {}", e)),
+        }
+    })
+    .await
+    .map_err(|e| format!("Ping task failed: {}", e))?
+}
 fn bridge_log_path() -> PathBuf {
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
@@ -592,6 +610,7 @@ pub fn run() {
         .manage(BridgeState::new(BridgeState::load_port_from_config()))
         .invoke_handler(tauri::generate_handler![
             start_bridge,
+            bridge_ping,
             stop_bridge,
             bridge_is_running,
             bridge_status,

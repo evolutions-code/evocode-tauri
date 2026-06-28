@@ -116,6 +116,13 @@ export async function getAppVersion(): Promise<string> {
   return invoke<string>('get_app_version')
 }
 
+/**
+ * Ping the bridge to check if it's reachable and get latency in ms.
+ * Rejects if the bridge is not running or connection is refused.
+ */
+export async function pingBridge(): Promise<number> {
+  return invoke<number>('bridge_ping')
+}
 export async function getBridgePort(): Promise<number> {
   return invoke<number>('get_bridge_port')
 }
