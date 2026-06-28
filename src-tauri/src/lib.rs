@@ -2,6 +2,7 @@
 mod traits;
 mod fetchers;
 mod prompts;
+mod codex;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -94,17 +95,12 @@ async fn start_bridge(state: State<'_, BridgeState>) -> Result<String, String> {
     }
 
     let config = evocode_config::EvocodeConfig::load().unwrap_or_default();
-    let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
-
     let port = state.port.load(std::sync::atomic::Ordering::Relaxed);
     let listen_addr: std::net::SocketAddr = format!("127.0.0.1:{}", port)
         .parse()
         .map_err(|e| format!("Invalid port: {}", e))?;
     let cfg = ServerConfig {
         listen: listen_addr,
-        codex_home: Some(codex_home),
-        codex_config_overrides: config.codex_config_overrides(),
-        codex_env: config.codex_env(),
         providers: config.provider_routes(),
         upstream_url: config
             .base_url()
@@ -311,8 +307,8 @@ async fn save_config(config: evocode_config::EvocodeConfig) -> Result<(), String
 #[tauri::command]
 async fn sync_to_codex() -> Result<(), String> {
     let config = evocode_config::load_config().map_err(|e| e.to_string())?;
-    let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
-    config.setup_codex_home(&codex_home).map_err(|e| e.to_string())?;
+    let codex_home = crate::codex::default_home()?;
+    crate::codex::setup_home(&config, &codex_home)?;
 
     // Determine base_instructions content:
     // Priority:
@@ -360,21 +356,7 @@ async fn sync_to_codex() -> Result<(), String> {
 
 #[tauri::command]
 async fn sync_model_to_codex(model: String) -> Result<(), String> {
-    // Write the new model slug and remove global static overrides so that
-    // Codex uses per-model values from the model catalog (static or dynamic).
-    let codex_home = evocode_config::default_codex_home().map_err(|e| e.to_string())?;
-    let config_path = codex_home.join("config.toml");
-    let toml_str = std::fs::read_to_string(&config_path).unwrap_or_default();
-    let mut cfg: toml::Value = toml::from_str(&toml_str).unwrap_or(toml::Value::Table(toml::Table::new()));
-    if let Some(table) = cfg.as_table_mut() {
-        table.insert("model".to_string(), toml::Value::String(model));
-        // Remove global overrides so per-model catalog values are used
-        table.remove("model_context_window");
-        table.remove("model_auto_compact_token_limit");
-    }
-    let out = toml::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
-    std::fs::write(&config_path, &out).map_err(|e| e.to_string())?;
-    Ok(())
+    crate::codex::sync_model(&model)
 }
 #[tauri::command]
 async fn test_provider_connectivity(
@@ -1814,7 +1796,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-
-
 
