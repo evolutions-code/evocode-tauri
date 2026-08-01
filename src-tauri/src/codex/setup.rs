@@ -78,7 +78,6 @@ fn write_config_toml(config: &EvocodeConfig, codex_home: &Path) -> Result<(), St
         model
     };
     let base_url = format!("http://127.0.0.1:{}", config.port());
-    let provider_name = config.provider.clone().unwrap_or_else(|| "evocode".to_string());
     let config_path = codex_home.join("config.toml");
     let catalog_path = codex_home.join("models_catalog.json");
 
@@ -101,9 +100,9 @@ fn write_config_toml(config: &EvocodeConfig, codex_home: &Path) -> Result<(), St
 
     set_toml_value(&mut cfg, &["model_provider".to_string()], toml::Value::String("evocode".to_string()));
     set_toml_value(&mut cfg, &["model".to_string()], toml::Value::String(model));
-    set_toml_value(&mut cfg, &provider_path(&provider_name, "name"), toml::Value::String("evocode".to_string()));
-    set_toml_value(&mut cfg, &provider_path(&provider_name, "requires_openai_auth"), toml::Value::Boolean(false));
-    set_toml_value(&mut cfg, &provider_path(&provider_name, "base_url"), toml::Value::String(base_url));
+    set_toml_value(&mut cfg, &provider_path("name"), toml::Value::String("evocode".to_string()));
+    set_toml_value(&mut cfg, &provider_path("requires_openai_auth"), toml::Value::Boolean(false));
+    set_toml_value(&mut cfg, &provider_path("base_url"), toml::Value::String(base_url));
     set_toml_value(&mut cfg, &["model_context_window".to_string()], toml::Value::Integer(ctx_win.unwrap_or(256_000)));
     set_toml_value(&mut cfg, &["model_auto_compact_token_limit".to_string()], toml::Value::Integer(compact_limit.unwrap_or(200_000)));
     set_toml_value(&mut cfg, &["model_catalog_json".to_string()], toml::Value::String(catalog_path.to_string_lossy().to_string()));
@@ -187,6 +186,8 @@ fn set_toml_value(config: &mut toml::Value, path: &[String], value: toml::Value)
     table.insert(path[path.len() - 1].clone(), value);
 }
 
-fn provider_path(provider_name: &str, key: &str) -> Vec<String> {
-    vec!["model_providers".to_string(), provider_name.to_string(), key.to_string()]
+fn provider_path(key: &str) -> Vec<String> {
+    // Codex resolves `model_provider = "evocode"` against this section, so the
+    // section name must always be `evocode`, regardless of the upstream provider id.
+    vec!["model_providers".to_string(), "evocode".to_string(), key.to_string()]
 }
